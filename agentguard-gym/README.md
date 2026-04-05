@@ -42,7 +42,7 @@ Real-world **defensive security operations** simulator for agentic AI: analysts 
 
 ### Calculations & equations (both gyms)
 
-- **Full audit (identical copy in this repo):** [`CALCULATIONS_REFERENCE.md`](./CALCULATIONS_REFERENCE.md) — every formula, bound, and file pointer for **AgentGuard-Gym and AML-DefenseGym** so you can verify algorithms in one sitting.
+- **Full audit (identical copy in this repo):** `[CALCULATIONS_REFERENCE.md](./CALCULATIONS_REFERENCE.md)` — every formula, bound, and file pointer for **AgentGuard-Gym and AML-DefenseGym** so you can verify algorithms in one sitting.
 
 ### OpenEnv validation (local)
 
@@ -61,7 +61,7 @@ uv sync --extra dev
 PYTHONPATH=. python scripts/offline_baseline.py   # writes baseline_scores.json
 ```
 
-Commit **`baseline_scores.json`** for reviewers. For the **LLM** baseline, run `python inference.py` with `HF_TOKEN` set (scores vary by model).
+Commit `**baseline_scores.json**` for reviewers. For the **LLM** baseline, run `python inference.py` with `HF_TOKEN` set (scores vary by model).
 
 ### Reward math (audit trail)
 

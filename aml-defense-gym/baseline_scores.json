@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-04-05T14:09:40.464941+00:00",
+  "generated_at": "2026-04-05T15:34:04.361178+00:00",
   "project": "aml-defense-gym",
   "method": "offline_oracle_policy",
-  "mean_task_score": 0.9278,
+  "mean_task_score": 0.9667,
   "tasks": {
     "sanctions_screening": {
       "task": "sanctions_screening",
@@ -25,9 +25,9 @@
     "transaction_monitoring": {
       "task": "transaction_monitoring",
       "steps": 1,
-      "episode_score": 0.8833,
+      "episode_score": 1.0,
       "step_rewards": [
-        0.8833
+        1.0
       ]
     }
   }

@@ -53,6 +53,27 @@ Real-world **AML compliance operations** surface: sanctions list disposition, En
 
 Same as the organizer brief: `API_BASE_URL`, `MODEL_NAME`, `HF_TOKEN` (+ optional `LOCAL_IMAGE_NAME`).
 
+### Calculations & equations (both gyms)
+
+- **Full audit:** `[CALCULATIONS_REFERENCE.md](./CALCULATIONS_REFERENCE.md)` — same document as in AgentGuard-Gym; covers **both** projects’ graders and normalization.
+
+### OpenEnv validation
+
+```bash
+cd aml-defense-gym
+openenv validate --verbose .
+```
+
+### Reproducible baseline scores (no API key)
+
+```bash
+cd aml-defense-gym
+uv sync --extra dev
+PYTHONPATH=. python scripts/offline_baseline.py
+```
+
+See `**baseline_scores.json**`. LLM baseline: `python inference.py` + `HF_TOKEN`.
+
 ### Reward math (audit trail)
 
 1. **Sanctions** — asymmetric costs (`illicit_fn` ≪ `legit_fp`) then min–max to `[0,1]` (`AMLRewardConfig`, `sanctions_bounds`).

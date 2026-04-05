@@ -107,7 +107,9 @@ def grade_transaction_batch(
         return 1.0, {"illicit_count": 0}
 
     ranked = sorted(range(n), key=lambda i: scores[i], reverse=True)
-    k = max(1, min(5, len(illicit_idx) + 1))
+    # Evaluation budget k must be able to cover all positives in the batch, else max recall < 1
+    # even for a perfect ranker (see verification PDF §5.4). Cap k at batch size n only.
+    k = min(n, max(1, len(illicit_idx)))
     topk = set(ranked[:k])
     caught = sum(1 for i in illicit_idx if i in topk)
     recall = caught / len(illicit_idx)

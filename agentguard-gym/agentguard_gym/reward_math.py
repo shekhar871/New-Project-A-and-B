@@ -51,10 +51,10 @@ def mttd_mttr_step_potential(
     mttr_scale: float,
 ) -> float:
     """
-    Bounded "potential" term: faster detect/close yields a slightly higher multiplier headroom.
+    Bounded **positive bonus** added to raw utility (never subtracted): faster detect/close ⇒ larger bonus.
 
-    We keep it sub-linear (1/(1+delay)) so it does not explode when the agent is slow; that
-    mirrors how real SOC targets treat dwell time: every extra step hurts, but not infinitely.
+    Sub-linear 1/(1+delay) so slow agents still get some credit but strictly less than fast ones.
+    (External write-ups that treat this term as a *penalty subtracted* from utility get the sign wrong.)
     """
     bonus = 0.0
     if detected_step is not None and detected_step >= 0:

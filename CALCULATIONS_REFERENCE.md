@@ -69,7 +69,7 @@ U \leftarrow U \times 0.9.
 - **False negative surcharges** (extra penalty when the attack is let through):
   - Prompt injection: `+ fn_extra_prompt` = `**-3.0`**
   - SSRF: `+ fn_extra_ssrf` = `**-4.0`**
-  - Memory: `+ fn_extra_memory` = `**-3.5**`
+  - Memory: `+ fn_extra_memory` = `**-3.5`**
 
 (Here “+” means adding a negative number.)
 
@@ -79,10 +79,12 @@ Let `detected_step` / `remediated_step` be step indices maintained by the enviro
 
 \phi_{\text{time}} =
 \frac{\alpha}{1 + d_{\text{det}}}
++
+\frac{\beta}{1 + \max(0, d_{\text{rem}} - d_{\text{det}})}
 
-- \frac{\beta}{1 + \max(0, d_{\text{rem}} - d_{\text{det}})}
+This is **added** to raw utility (not subtracted): larger delay ⇒ **smaller** bonus ⇒ **lower** total utility, so faster detection/remediation is rewarded.
 
-**Defaults:** \alpha = `mttd_scale` `**0.15`**, \beta = `mttr_scale` `**0.1**`.
+**Defaults:** \alpha = `mttd_scale` `**0.15`**, \beta = `mttr_scale` `**0.1`**.
 
 **Code:** `reward_math.py` → `mttd_mttr_step_potential`; called from each `grade`_* in `graders.py`.
 
@@ -164,7 +166,9 @@ Let L_i \in 0,1 be labels (`is_laundering`), s_i \in [0,1] agent scores.
 Let `recall@k` = fraction of illicit rows captured in top‑k by s (descending).  
 Let `fp_pressure` = fraction of **benign** rows inside that top‑k.
 
-k = \max\bigl(1,\ \min(5,\ | i: L_i=1  | + 1)\bigr)
+k = \min\bigl(n,\ \max(1,\ |\{i: L_i=1\}|)\bigr)
+
+So the alert budget can cover **all** illicit rows in the batch (capped only by batch size `n`). A perfect ranker can achieve `recall@k = 1` whenever all positives fit in the batch.
 
 U_{\text{raw}} = \text{clamp}_{[0,1]}\bigl(0.65 \cdot \text{recall@k} + 0.35 \cdot (1 - \text{fppressure})\bigr)
 
@@ -192,6 +196,20 @@ Here **no extra min–max**: r = U_{\text{raw}} already in [0,1].
   ```
   Latest check: **`[OK] agentguard-gym: Ready for multi-mode deployment`** and **`[OK] aml-defense-gym: Ready for multi-mode deployment`** (docker, `openenv_serve`, `uv run`, `python_module` all **YES**).
 - **Reproducible scores without an LLM:** `uv sync --extra dev` then `PYTHONPATH=. python scripts/offline_baseline.py` → writes `**baseline_scores.json`** (oracle policy; upper-ish bound on the graders).
+
+---
+
+## Cross-check: `Verification and Improvement of Calculations - Google Docs.pdf`
+
+The PDF in the same **`SCALAR/`** folder audits this document against RL and SOC/AML practice. Here is how it lines up with the **current code**:
+
+| PDF section | Verdict | Notes |
+|-------------|---------|--------|
+| **§5.1 MTTR “inversion”** | **Does not apply** | The paper models the timing term as **subtracted**. In code, `mttd_mttr_step_potential` is **added** to utility (`reward_math.py`). Shorter detection/remediation delays ⇒ **larger** additive bonus ⇒ **higher** utility. |
+| **§5.2 min–max fallback** | **Edge case** | If `best <= worst`, we `clamp01(raw)`. For negative raw utilities that collapses many distinct failures toward `0` — unlikely with fixed `RewardConfig` bounds, but worth monitoring if bounds are ever data-driven. |
+| **§5.3 partial multiplier on negatives** | **Low risk today** | Partial multipliers apply only on **TP** paths after outcome weights are applied; TP branch uses positive `w_tp`. Order of operations is in `graders.py`. |
+| **§5.4 AML top‑k cap** | **Was valid; fixed** | Old `k = min(5, \|illicit\|+1)` could make max recall &lt; 1 for dense positives. **Now** `k = min(n, max(1, \|illicit\|))` in `grade_transaction_batch`. |
+| **§5.5 Ng et al. potential shaping** | **Fair critique** | The timing term is an **informal** bounded bonus, not the strict \(F(s')-F(s)\) potential-difference that preserves optimal policies. We cite Ng et al. as **inspiration**, not a claim of full policy invariance. |
 
 ---
 
