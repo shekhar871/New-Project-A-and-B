@@ -1,0 +1,7 @@
+name: agentguard-gym
+version: "0.2.0"
+description: >
+  Defensive cybersecurity gym (prompt injection, SSRF/tool misuse, memory poisoning) with
+  deterministic graders normalized to [0, 1].
+tags:
+  - openenv

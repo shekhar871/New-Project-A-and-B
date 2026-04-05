@@ -1,0 +1,117 @@
+---
+
+## title: AgentGuard-Gym
+
+emoji: 🛡️
+colorFrom: blue
+colorTo: red
+sdk: docker
+pinned: false
+license: bsd-3-clause
+tags:
+
+- openenv
+
+# AgentGuard-Gym
+
+Real-world **defensive security operations** simulator for agentic AI: analysts triage prompt streams, tool/URL traces, and memory artifacts representing OWASP-style agentic risks (2026 framing). This is intentionally **not** a toy game—every episode mirrors workflows security engineers run when reviewing autonomous copilots.
+
+## Hackathon compliance (OpenEnv Round 1)
+
+
+| Requirement                    | How this repo satisfies it                                                                                           |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| Real-world task                | Enterprise SOC / AI-red-team style triage (prompt injection, SSRF, memory abuse).                                    |
+| `reset` / `step` / `state`     | Implemented in `AgentGuardEnvironment` + exposed via FastAPI.                                                        |
+| Typed Pydantic models          | `AgentGuardAction`, `AgentGuardObservation`, `AgentGuardReward`, `AgentGuardState`, `StepResult`.                    |
+| `openenv.yaml`                 | Root manifest with `tags: [openenv]`.                                                                                |
+| ≥3 tasks + graders             | Prompt injection (**easy**), SSRF/tool chain (**medium**), memory poisoning / secrets (**hard**).                    |
+| Rewards / scores in **[0, 1]** | `AgentGuardReward.value` is min–max normalized from a confusion-matrix utility (see `reward_math.py`, `graders.py`). |
+| Partial progress               | SSRF `AUDIT_TOOL_CHAIN`, memory coarse `BLOCK`, timing potential (MTTD/MTTR proxies).                                |
+| Baseline inference             | Root `inference.py` using **OpenAI-compatible** client + env vars `API_BASE_URL`, `MODEL_NAME`, `HF_TOKEN`.          |
+| Dockerfile                     | Root `Dockerfile` + `server/Dockerfile` (identical layout).                                                          |
+| Tests                          | `tests/test_rewards_bounded.py` (reward range + determinism smoke).                                                  |
+
+
+### Environment variables (inference)
+
+- `API_BASE_URL` — OpenAI-compatible endpoint (default HF router sample).
+- `MODEL_NAME` — model id for chat completions.
+- `HF_TOKEN` — bearer token / API key (also accepts `OPENAI_API_KEY`).
+- `LOCAL_IMAGE_NAME` / `IMAGE_NAME` — optional, for Docker-based clients.
+
+### Calculations & equations (both gyms)
+
+- **Full audit (identical copy in this repo):** [`CALCULATIONS_REFERENCE.md`](./CALCULATIONS_REFERENCE.md) — every formula, bound, and file pointer for **AgentGuard-Gym and AML-DefenseGym** so you can verify algorithms in one sitting.
+
+### OpenEnv validation (local)
+
+```bash
+# Python 3.11 + openenv on PATH (see HF / Meta docs)
+cd agentguard-gym
+openenv validate --verbose .
+# Expect: [OK] Ready for multi-mode deployment
+```
+
+### Reproducible baseline scores (no API key)
+
+```bash
+cd agentguard-gym
+uv sync --extra dev
+PYTHONPATH=. python scripts/offline_baseline.py   # writes baseline_scores.json
+```
+
+Commit **`baseline_scores.json`** for reviewers. For the **LLM** baseline, run `python inference.py` with `HF_TOKEN` set (scores vary by model).
+
+### Reward math (audit trail)
+
+1. **Confusion utility** — weighted TP/TN/FP/FN with false-negative dominance (common in security eval literature).
+2. **Catastrophic FN surcharge** — extra penalty when the agent explicitly allows an obvious abuse (`fn_extra_`* in `RewardConfig`).
+3. **Time potential** — bounded `1/(1+delay)` style term inspired by MTTD/MTTR thinking and potential-based shaping (Ng et al., 1999).
+4. **Normalization** — `minmax_normalize(utility, worst, best)` → `[0, 1]` (`reward_math.py`).
+
+### Action / observation space
+
+- **Actions (`AgentGuardAction`)**  
+`defense ∈ {allow, sanitize, block, quarantine_memory, clear_exposed_secrets, audit_tool_chain}` + short `rationale`.
+- **Observations (`AgentGuardObservation`)**  
+`task`, `task_difficulty`, `narrative`, structured `artifacts[]`, `tool_trace[]`, optional `validation_error`.
+- **Rewards (`AgentGuardReward`)**  
+`value ∈ [0,1]`, `utility_raw` (pre-map), `outcome` (`tp|tn|fp|fn`), `partial_credit`.
+
+### Local quickstart
+
+```bash
+cd agentguard-gym
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+uvicorn server.app:app --reload --port 8001
+```
+
+### Docker
+
+```bash
+docker build -t agentguard-gym:local .
+docker run --rm -p 8001:8000 agentguard-gym:local
+curl -s http://127.0.0.1:8001/health
+```
+
+### Baseline inference + stdout contract
+
+```bash
+export HF_TOKEN=...   # or OPENAI_API_KEY
+export API_BASE_URL=https://router.huggingface.co/v1
+export MODEL_NAME=Qwen/Qwen2.5-72B-Instruct
+python inference.py
+```
+
+The script prints `[START]`, one `[STEP]` per `env.step`, and a closing `[END]` even if something throws mid-episode.
+
+### Baseline scores (local smoke, no LLM)
+
+Run `pytest tests/test_rewards_bounded.py` — numerical env tests only.  
+LLM baselines vary by provider; re-run `python inference.py` twice and compare means if you need stability checks.
+
+### OpenEnv CLI note
+
+`openenv validate` ships with `openenv-core` (requires **Python ≥3.10** on the validator machine). If your laptop is older, run validation inside the Docker image above.

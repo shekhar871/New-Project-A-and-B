@@ -1,0 +1,7 @@
+name: aml-defense-gym
+version: "0.2.0"
+description: >
+  AML compliance gym (sanctions, EDD, transaction monitoring) with asymmetric utilities mapped
+  to [0, 1] for evaluation harnesses.
+tags:
+  - openenv

@@ -1,0 +1,6 @@
+timestamp,from_bank,to_bank,amount,currency,is_laundering
+2022-09-01T10:00:00,Alpha,Beta,150.00,USD,0
+2022-09-01T10:05:00,Beta,Gamma,149.00,USD,0
+2022-09-01T10:06:00,Gamma,Delta,148.00,USD,1
+2022-09-01T11:00:00,Delta,Epsilon,5000.00,USD,0
+2022-09-01T12:00:00,Epsilon,Zeta,4995.00,USD,1
