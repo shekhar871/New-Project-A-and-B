@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentguard-gym"
+version = "0.2.0"
+description = "OpenEnv-style cybersecurity RL gym: prompt injection, SSRF, memory poisoning (OWASP agentic 2026)."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "pydantic>=2.5.0",
+    "openai>=1.40.0",
+    "openenv-core>=0.2.0",
+]
+
+[project.scripts]
+server = "server.app:main"
+
+[project.optional-dependencies]
+dev = ["httpx>=0.25.0", "pytest>=7.0"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["agentguard_gym*"]
