@@ -166,7 +166,7 @@ Let L_i \in 0,1 be labels (`is_laundering`), s_i \in [0,1] agent scores.
 Let `recall@k` = fraction of illicit rows captured in top‑k by s (descending).  
 Let `fp_pressure` = fraction of **benign** rows inside that top‑k.
 
-k = \min\bigl(n,\ \max(1,\ |\{i: L_i=1\}|)\bigr)
+k = \min\bigl(n,\ \max(1,\ |i: L_i=1|)\bigr)
 
 So the alert budget can cover **all** illicit rows in the batch (capped only by batch size `n`). A perfect ranker can achieve `recall@k = 1` whenever all positives fit in the batch.
 
@@ -201,15 +201,17 @@ Here **no extra min–max**: r = U_{\text{raw}} already in [0,1].
 
 ## Cross-check: `Verification and Improvement of Calculations - Google Docs.pdf`
 
-The PDF in the same **`SCALAR/`** folder audits this document against RL and SOC/AML practice. Here is how it lines up with the **current code**:
+The PDF in the same `**SCALAR/`** folder audits this document against RL and SOC/AML practice. Here is how it lines up with the **current code**:
 
-| PDF section | Verdict | Notes |
-|-------------|---------|--------|
-| **§5.1 MTTR “inversion”** | **Does not apply** | The paper models the timing term as **subtracted**. In code, `mttd_mttr_step_potential` is **added** to utility (`reward_math.py`). Shorter detection/remediation delays ⇒ **larger** additive bonus ⇒ **higher** utility. |
-| **§5.2 min–max fallback** | **Edge case** | If `best <= worst`, we `clamp01(raw)`. For negative raw utilities that collapses many distinct failures toward `0` — unlikely with fixed `RewardConfig` bounds, but worth monitoring if bounds are ever data-driven. |
-| **§5.3 partial multiplier on negatives** | **Low risk today** | Partial multipliers apply only on **TP** paths after outcome weights are applied; TP branch uses positive `w_tp`. Order of operations is in `graders.py`. |
-| **§5.4 AML top‑k cap** | **Was valid; fixed** | Old `k = min(5, \|illicit\|+1)` could make max recall &lt; 1 for dense positives. **Now** `k = min(n, max(1, \|illicit\|))` in `grade_transaction_batch`. |
-| **§5.5 Ng et al. potential shaping** | **Fair critique** | The timing term is an **informal** bounded bonus, not the strict \(F(s')-F(s)\) potential-difference that preserves optimal policies. We cite Ng et al. as **inspiration**, not a claim of full policy invariance. |
+
+| PDF section                              | Verdict              | Notes                                                                                                                                                                                                                      |
+| ---------------------------------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **§5.1 MTTR “inversion”**                | **Does not apply**   | The paper models the timing term as **subtracted**. In code, `mttd_mttr_step_potential` is **added** to utility (`reward_math.py`). Shorter detection/remediation delays ⇒ **larger** additive bonus ⇒ **higher** utility. |
+| **§5.2 min–max fallback**                | **Edge case**        | If `best <= worst`, we `clamp01(raw)`. For negative raw utilities that collapses many distinct failures toward `0` — unlikely with fixed `RewardConfig` bounds, but worth monitoring if bounds are ever data-driven.       |
+| **§5.3 partial multiplier on negatives** | **Low risk today**   | Partial multipliers apply only on **TP** paths after outcome weights are applied; TP branch uses positive `w_tp`. Order of operations is in `graders.py`.                                                                  |
+| **§5.4 AML top‑k cap**                   | **Was valid; fixed** | Old `k = min(5, |illicit|+1)` could make max recall < 1 for dense positives. **Now** `k = min(n, max(1, |illicit|))` in `grade_transaction_batch`.                                                                         |
+| **§5.5 Ng et al. potential shaping**     | **Fair critique**    | The timing term is an **informal** bounded bonus, not the strict F(s')-F(s) potential-difference that preserves optimal policies. We cite Ng et al. as **inspiration**, not a claim of full policy invariance.             |
+
 
 ---
 

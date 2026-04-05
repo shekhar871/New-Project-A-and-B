@@ -1,0 +1,12 @@
+[START] task=sanctions_screening env=aml-defense-gym model=Qwen/Qwen2.5-72B-Instruct
+[STEP] step=1 action={"task": "sanctions_screening", "sanctions_disposition": "clear_false_positive"} reward=0.00 done=false error=null
+[STEP] step=2 action={"task": "sanctions_screening", "sanctions_disposition": "clear_false_positive"} reward=0.85 done=false error=null
+[STEP] step=3 action={"task": "sanctions_screening", "sanctions_disposition": "clear_false_positive"} reward=0.85 done=true error=null
+[END] success=false steps=3 score=0.57 rewards=0.00,0.85,0.85
+[START] task=edd_review env=aml-defense-gym model=Qwen/Qwen2.5-72B-Instruct
+[STEP] step=1 action={"task": "edd_review", "edd_report": {"adverse_media_summary": "No significant adverse media found for customer C-104332. The customer has not been mentioned in any recent news articles or reports that would raise concerns about their reputation or involvement in illegal activities.", "beneficial_ownership": "Customer C-104332 is owned by a single individual, John Doe, who holds 100% of the shares. No other beneficial owners have been identified.", "geography_risk": "The jurisdiction listed for customer C-104332 is on the offshore shell list, which poses a higher risk due to potential lack of transparency and regulatory oversight.", "conclusion": "Given the high risk tier, offshore shell jurisdiction, and PEP proximity, further investigation is recommended to ensure compliance with AML regulations. The customer should be subject to ongoing monitoring and additional due diligence measures."}} reward=1.00 done=true error=null
+[END] success=true steps=1 score=1.00 rewards=1.00
+[START] task=transaction_monitoring env=aml-defense-gym model=Qwen/Qwen2.5-72B-Instruct
+[STEP] step=1 action={"task": "transaction_monitoring", "transaction_scores": [0.1, 0.9, 0.85, 0.1, 0.2]} reward=1.00 done=true error=null
+[END] success=true steps=1 score=1.00 rewards=1.00
+[SUMMARY] benchmark=aml-defense-gym mean_task_score=0.86
