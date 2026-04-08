@@ -14,7 +14,6 @@ dependencies = [
     "pydantic>=2.5.0",
     "pandas>=2.0.0",
     "openai>=1.40.0",
-    "openenv-core>=0.2.0",
 ]
 
 [project.scripts]
@@ -25,7 +24,7 @@ dev = ["httpx>=0.25.0", "pytest>=7.0"]
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["aml_defense_gym*"]
+include = ["aml_defense_gym*", "server*"]
 
 [tool.setuptools.package-data]
 aml_defense_gym = ["data/*.csv"]
