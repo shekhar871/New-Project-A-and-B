@@ -8,6 +8,8 @@ From `agentguard-gym/`:
 
 ```bash
 uv sync --extra dev
+# For GRPO + optional Unsloth:
+uv sync --extra dev --extra grandfinals
 ```
 
 ## 2) Unit tests (math + reward bounds)
@@ -38,25 +40,29 @@ On the dashboard:
 - Click **Start trainer** to see episodes and rewards live.
 - Click **Run one episode** to inspect step-by-step outcomes.
 
-## 5) Baseline inference (LLM) — optional
-
-Requires a token:
+## 5) Reproducible “before” baseline (no API, no GPU)
 
 ```bash
-export HF_TOKEN=...
-export API_BASE_URL=https://router.huggingface.co/v1
-export MODEL_NAME=Qwen/Qwen2.5-72B-Instruct
 uv run python inference.py
 ```
 
-## 6) What “training” means here (in this repo)
+Uses keyword heuristics on `data/holdout_attacks.json` and prints a block rate. Judges can run this on a fresh clone.
 
-This repo is a **gym + grader + interface**. The live UI trainer is a **deterministic simulator** that:
+## 6) Generalization with API (optional)
 
-- runs real episodes through `AgentGuardEnvironment`
-- applies either a `heuristic` or `random` policy
-- streams per-step rewards/outcomes in real time
+With `HF_TOKEN` / `API_BASE_URL` / `MODEL_NAME` set:
 
-If you later add RL fine-tuning (TRL/GRPO/etc.), you can wire your trained policy into the same
-dashboard by replacing the action policy used by the trainer.
+```bash
+uv run python scripts/eval_before_after.py
+```
 
+## 7) GRPO training (optional; works without Unsloth)
+
+- Generate corpus: `uv run python scripts/generate_offline_corpus.py`
+- Train: `uv run python train_adversarial.py` (uses **Unsloth** if installed, else **transformers + PEFT + 4bit**)
+- Metrics land in W&B and in `runs/training_metrics.jsonl` (from `JsonlTrainingMetricsCallback`)
+- Plot: `uv run python scripts/plot_training_metrics.py` → `results/training_curve.png` (requires `matplotlib` from `--extra dev`)
+
+## 8) UI “trainer” vs full GRPO
+
+The live UI **trainer** is a **simulated** run (`heuristic` / `random` over the real `AgentGuardEnvironment`) for visibility. **GRPO** is `train_adversarial.py` and produces LoRA weights under `checkpoints/defender/`.
