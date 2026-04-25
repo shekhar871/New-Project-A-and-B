@@ -69,7 +69,7 @@ U \leftarrow U \times 0.9.
 - **False negative surcharges** (extra penalty when the attack is let through):
   - Prompt injection: `+ fn_extra_prompt` = `**-3.0`**
   - SSRF: `+ fn_extra_ssrf` = `**-4.0`**
-  - Memory: `+ fn_extra_memory` = `**-3.5**`
+  - Memory: `+ fn_extra_memory` = `**-3.5`**
 
 (Here “+” means adding a negative number.)
 
@@ -82,7 +82,7 @@ Let `detected_step` / `remediated_step` be step indices maintained by the enviro
 
 - \frac{\beta}{1 + \max(0, d_{\text{rem}} - d_{\text{det}})}
 
-**Defaults:** \alpha = `mttd_scale` `**0.15`**, \beta = `mttr_scale` `**0.1**`.
+**Defaults:** \alpha = `mttd_scale` `**0.15`**, \beta = `mttr_scale` `**0.1`**.
 
 **Code:** `reward_math.py` → `mttd_mttr_step_potential`; called from each `grade`_* in `graders.py`.
 
