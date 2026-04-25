@@ -1,133 +1,315 @@
 ---
 
 ## title: AgentGuard-Gym
-
 emoji: 🛡️
 colorFrom: blue
 colorTo: red
 sdk: docker
 pinned: false
 license: bsd-3-clause
+app_port: 7860
 tags:
-
-- openenv
+  - openenv
+  - security
+  - adversarial-rl
 
 # AgentGuard-Gym
 
-Real-world **defensive security operations** simulator for agentic AI: analysts triage prompt streams, tool/URL traces, and memory artifacts representing OWASP-style agentic risks (2026 framing). This is intentionally **not** a toy game—every episode mirrors workflows security engineers run when reviewing autonomous copilots.
+**AgentGuard-Gym** is an [OpenEnv](https://github.com/openenv/)-style cybersecurity gym for **agentic AI defense**: triage of prompt streams, tool/URL traces, and memory artifacts aligned with **OWASP Agentic AI (2026)**-style risk classes. The same codebase provides (1) a **deterministic, grader-based environment** for hackathon baselines, (2) a **Grand Finals adversarial stack** (attacker → defender → judge, curriculum, ELO, novelty, GRPO), including **~30% benign (TN/FP) episodes** from `data/benign_corpus.json` so the defender does not collapse to “always block”, and (3) a **FastAPI server** with a **real-time HTML dashboard** (Server-Sent Events) for episodes and training telemetry.
 
-## Hackathon compliance (OpenEnv Round 1)
+> **Scope:** This repository is **AgentGuard-Gym only** (cyber/AI security). Training and math are documented for reproducibility; see `CALCULATIONS_REFERENCE.md` for **AgentGuard** reward derivations (ignore legacy AML-DefenseGym sections in that file if you maintain a single-gym tree).
+
+---
+
+## Table of contents
+
+1. [Approaches & research map](#1-approaches--research-map)
+2. [Architecture (high level)](#2-architecture-high-level)
+3. [Component reference](#3-component-reference)
+4. [Gaps & blueprint coverage (G1–G16)](#4-gaps--blueprint-coverage-g1g16)
+5. [Data, contracts, and files](#5-data-contracts-and-files)
+6. [API & real-time UI](#6-api--real-time-ui)
+7. [Run locally](#7-run-locally)
+8. [Training (GRPO / T4 / Colab / HF)](#8-training-grpo--t4--colab--hf)
+9. [Deployment (Docker, Hugging Face Spaces)](#9-deployment-docker-hugging-face-spaces)
+10. [Validation, tests, and pre-submission](#10-validation-tests-and-pre-submission)
+11. [Environment variables](#11-environment-variables)
+12. [Documentation index](#12-documentation-index)
+
+---
+
+## 1. Approaches & research map
 
 
-| Requirement                    | How this repo satisfies it                                                                                           |
-| ------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
-| Real-world task                | Enterprise SOC / AI-red-team style triage (prompt injection, SSRF, memory abuse).                                    |
-| `reset` / `step` / `state`     | Implemented in `AgentGuardEnvironment` + exposed via FastAPI.                                                        |
-| Typed Pydantic models          | `AgentGuardAction`, `AgentGuardObservation`, `AgentGuardReward`, `AgentGuardState`, `StepResult`.                    |
-| `openenv.yaml`                 | Root manifest with `tags: [openenv]`.                                                                                |
-| ≥3 tasks + graders             | Prompt injection (**easy**), SSRF/tool chain (**medium**), memory poisoning / secrets (**hard**).                    |
-| Rewards / scores in **[0, 1]** | `AgentGuardReward.value` is min–max normalized from a confusion-matrix utility (see `reward_math.py`, `graders.py`). |
-| Partial progress               | SSRF `AUDIT_TOOL_CHAIN`, memory coarse `BLOCK`, timing potential (MTTD/MTTR proxies).                                |
-| Baseline inference             | Root `inference.py` using **OpenAI-compatible** client + env vars `API_BASE_URL`, `MODEL_NAME`, `HF_TOKEN`.          |
-| Dockerfile                     | Root `Dockerfile` + `server/Dockerfile` (identical layout).                                                          |
-| Tests                          | `tests/test_rewards_bounded.py` (reward range + determinism smoke).                                                  |
+| Approach                                    | What we do                                                                                                                                              | Where it lives                                                                       |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| **OpenEnv gym API**                         | `reset` / `step` / `state` over HTTP, typed observations/rewards, `openenv.yaml` manifest                                                               | `server/app.py`, `agentguard_gym/environment.py`, `openenv.yaml`                     |
+| **Realistic SOC / red-team triage**         | Three tasks: prompt injection (easy), SSRF / tool chain (medium), memory poisoning (hard)                                                               | `agentguard_gym/graders.py`, `agentguard_gym/models.py`                              |
+| **Confusion-matrix utility + time shaping** | Weighted TP/TN/FP/FN, FN surcharges, partial credit on audits/blocks, MTTD/MTTR-style **bounded potential**                                             | `reward_math.py`, `graders.py`, `environment.py`                                     |
+| **Reward normalization to [0, 1]**          | Min–max map from conservative utility bounds, clamp; invalid steps penalized                                                                            | `reward_math.py`, `AgentGuardReward` in `models.py`                                  |
+| **Adversarial self-play (Grand Finals)**    | **Attacker** (LLM or seed) proposes attacks; **~30% episodes** sample **legitimate** traffic (TN/FP) from `benign_corpus.json`; **Defender** + **Judge** (rules + optional LLM) | `attacker.py`, `judge.py`, `adversarial_loop.py` |
+| **Curriculum + difficulty**                 | Difficulty in [0,1], rolling **win rate**, **Nash-style** phase shift when reward variance is flat                                                      | `grandfinals/curriculum.py`                                                          |
+| **ELO / competitive signal**                | Tracks relative strength of attacker vs defender for analytics                                                                                          | `adversarial_loop.py`, `ELOTracker` in `models.py`                                   |
+| **Novelty of attacks**                      | Bag-of-words style overlap vs corpus (portable, no external model required)                                                                             | `grandfinals/novelty.py`                                                             |
+| **Defender/attacker rewards (R_D, R_A)**    | Blueprint v4: normalized defender reward from confusion + terms; attacker reward from novelty, difficulty, success gap, judge, repetition               | `grandfinals/rewards.py`                                                             |
+| **Theory of Mind (ToM)**                    | System prompt asks defender to **infer attacker intent** before deciding                                                                                | `grandfinals/prompts.py`                                                             |
+| **Structured observations**                 | Narrative + JSON-friendly defender prompt builder                                                                                                       | `grandfinals/observation_builder.py`                                                 |
+| **GRPO-style training (optional)**          | TRL `GRPOTrainer`, W&B **fp_rate** + **win_rate** (confusion tallies) + **entropy** guard                                                                | `train_adversarial.py`, `training/callbacks.py`, `training/reward_fns.py`            |
+| **Offline corpus**                          | Pre-generated JSONL to avoid rate limits and stabilize ablations                                                                                        | `scripts/generate_offline_corpus.py`, `data/offline_corpus.jsonl` (after generation) |
+| **Generalization eval**                     | Held-out or scripted evaluation summary                                                                                                                 | `scripts/eval_before_after.py`                                                       |
+| **Real-time UI**                            | SSE `EventBus`, simulated trainer, live adversarial step events                                                                                         | `realtime.py`, `/ui`, `/events` in `server/app.py`                                   |
+| **OWASP Agentic mapping**                   | ASI01 / ASI02 / ASI06 style alignment in manifest                                                                                                       | `openenv.yaml` `metadata.owasp_task_mapping`                                         |
 
 
-### Environment variables (inference)
+---
 
-- `API_BASE_URL` — OpenAI-compatible endpoint (default HF router sample).
-- `MODEL_NAME` — model id for chat completions.
-- `HF_TOKEN` — bearer token / API key (also accepts `OPENAI_API_KEY`).
-- `LOCAL_IMAGE_NAME` / `IMAGE_NAME` — optional, for Docker-based clients.
+## 2. Architecture (high level)
 
-### Calculations & equations (both gyms)
-
-- **Full audit (identical copy in this repo):** `[CALCULATIONS_REFERENCE.md](./CALCULATIONS_REFERENCE.md)` — every formula, bound, and file pointer for **AgentGuard-Gym and AML-DefenseGym** so you can verify algorithms in one sitting.
-
-### OpenEnv validation (local)
-
-```bash
-# Python 3.11 + openenv on PATH (see HF / Meta docs)
-cd agentguard-gym
-openenv validate --verbose .
-# Expect: [OK] Ready for multi-mode deployment
+```mermaid
+flowchart LR
+  subgraph APILayer[HTTP / OpenEnv]
+    API[FastAPI server]
+    UI[Single-page dashboard /ui]
+  end
+  subgraph core[Core gym]
+    ENV[AgentGuardEnvironment]
+    GR[graders + reward_math]
+  end
+  subgraph adv[Grand Finals]
+    ATK[Attacker]
+    DEF[DefenderBackend]
+    JUDGE[Judge]
+    CURR[CurriculumManager]
+    ADV[AdversarialSystem]
+  end
+  API --> ENV
+  API --> ADV
+  ADV --> ATK
+  ADV --> DEF
+  ADV --> JUDGE
+  ADV --> CURR
+  ENV --> GR
+  UI --> API
 ```
 
-### Reproducible baseline scores (no API key)
+
+
+- **Standard mode:** clients call `POST /reset` and `POST /step` only; the environment steps deterministically and returns `AgentGuardReward` in `[0,1]`.  
+- **Adversarial mode:** `AdversarialSystem` runs **malicious** (TP/FN) or **benign** (TN/FP) episodes, composes attacker → defender → judge on malicious paths, updates **ELO** and **curriculum**, and exposes JSON via `/adversarial/*`. The dashboard can consume both **toy trainer** and **adversarial** events.
+
+---
+
+## 3. Component reference
+
+### 3.1 Core package: `agentguard_gym/`
+
+
+| Module               | Role                                                                                                                                                                                                 |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `**environment.py`** | `AgentGuardEnvironment`: episode lifecycle, task selection, `step` → grader, reward assembly, `state` snapshot. Enforces Pydantic action validation.                                                 |
+| `**models.py**`      | Pydantic types: `AgentGuard*`, `StepResult`, cyber tasks, and **Grand Finals** types (`AttackerAction`, `JudgeVerdict`, `ELOTracker`, `AdversarialEpisodeResult`, `CyberAdversarialTaskType`, etc.). |
+| `**graders.py`**     | Task-specific label checks, confusion outcome (TP/TN/FP/FN), partial-credit paths (e.g. `AUDIT_TOOL_CHAIN`, coarse `BLOCK`), hooks into time potential.                                              |
+| `**reward_math.py**` | `minmax_normalize`, `mttd_mttr_step_potential`, and shared numeric helpers; keeps **rewards in [0,1]** after mapping.                                                                                |
+| `**client.py`**      | Thin HTTP client for the env API (local or remote).                                                                                                                                                  |
+| `**realtime.py**`    | `EventBus` (async SSE), `RealTimeTrainer` (heuristic / random policy over the **real** `AgentGuardEnvironment`), `TrainerConfig` / `TrainerStatus`. Powers the “live run” without an external GPU.   |
+
+
+### 3.2 Grand Finals: `agentguard_gym/grandfinals/`
+
+
+| Module                       | Role                                                                                                                                |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `**prompts.py`**             | System prompts for **attacker**, **defender** (incl. ToM), and **judge**; few-shot or rubric text for LLM judge mode.               |
+| `**observation_builder.py`** | Builds human/LLM-readable **defender** observation and `build_defender_prompt` (used in GRPO data loading).                         |
+| `**novelty.py`**             | `novelty_score` for diversity vs the rolling corpus (attacker signal + logging).                                                    |
+| `**attacker.py**`            | `Attacker`, `AttackCorpus`: sample/generate `AttackerAction` per task; optional **Anthropic** path or deterministic fallbacks.      |
+| `**judge.py`**               | Hybrid **rule** scoring + optional **LLM** judge; produces `judge_quality` for R_A.                                                 |
+| `**rewards.py`**             | `defender_reward_raw` / `defender_reward_normalize`, `attacker_reward`, `safe_reward` (NaN/inf guard).                              |
+| `**curriculum.py**`          | `CurriculumManager`: warmup, **win-rate** difficulty, **Nash** detector (low variance → bump difficulty, phase list).               |
+| `**adversarial_loop.py**`   | `AdversarialSystem`, `DefenderBackend`: with probability **0.30** (see `BENIGN_EPISODE_PROB`) serves **benign** traffic (TN/FP) from `data/benign_corpus.json`; otherwise the attacker produces a malicious example (TP/FN). ELO/curriculum use **defender_won = outcome ∈ {TP, TN}**. |
+
+
+### 3.3 Training: `agentguard_gym/training/`
+
+
+| Module              | Role                                                                                                                                                                                               |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `**reward_fns.py`** | `defender_reward_fn(prompts, completions)`: TRL-GRPO contract — parses model JSON, reads `[GT:…]` / `[TASK:…]` from prompts, maps to outcome, **normalizes** with same worst/best as `rewards.py`. |
+| `**callbacks.py`**  | `EntropyGuardCallback` + `WandbOutcomeMetricsCallback` (logs **fp_rate**, **win_rate**, outcome/* to W&B). |
+
+
+### 3.4 Entry points & scripts
+
+
+| Path                                       | Role                                                                                                                                     |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `**server/app.py**`          | FastAPI: OpenEnv routes, health, **trainer**, **SSE** `/events`, **adversarial** routes, `/ui` HTML. `PORT` default **7860** (Hugging Face Spaces).   |
+| `**train_adversarial.py**`  | **GRPO**: touches `data/training_started_at`, logs **fp_rate** / **win_rate** to W&B, `EntropyGuardCallback`, LoRA **adapter** checkpoint only. |
+| `**inference.py`** (if present)            | OpenAI-compatible **baseline** rollouts; prints `[START]` / `[STEP]` / `[END]` for judges.                                               |
+| `**scripts/generate_offline_corpus.py`**   | Writes `data/offline_corpus.jsonl` (e.g. ~600 lines mixed benign/malicious) for reproducible training.                                   |
+| `**scripts/offline_baseline.py**`          | No-API rough scores → `baseline_scores.json`.                                                                                            |
+| `**scripts/eval_before_after.py**`         | **generalization_score** on **data/holdout_attacks.json** (15 fixed attacks); lock vs `training_started_at` when present.                 |
+| `**scripts/plot_training_metrics.py`**     | If present: curves from `runs/training_metrics.jsonl` for submission evidence.                                                           |
+| `**tests/test_rewards_bounded.py**`        | Invariant: rewards in range + smoke.                                                                                                     |
+| `**tests/test_calculations_reference.py**` | Unit checks vs documented formulas.                                                                                                      |
+
+
+### 3.5 Configuration & deploy
+
+
+| File                                    | Role                                                                                                                                                                |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `**openenv.yaml**`                      | Name, version, **tags**, server hints, **observation/action/reward** schema sketch, `modes` (standard / adversarial), **RFC** and **OWASP** metadata for reviewers. |
+| `**pyproject.toml`**                    | Dependencies, `server` script, optional `grandfinals` extras, package discovery (includes `server*`).                                                               |
+| `**Dockerfile**`            | `ENV PORT=7860`, `EXPOSE 7860`, health check + `uvicorn` on `${PORT:-7860}`; copies `data/` for seeds, benign corpus, and holdout.                                 |
+| `**PRE_SUBMISSION_CHECKLIST.md`**       | Ordered verification before hackathon submit.                                                                                                                       |
+| `**CALCULATIONS_REFERENCE.md**`         | Equations and file pointers; use **AgentGuard** sections for this repo.                                                                                             |
+| `**AGENTGUARD_FINAL_BLUEPRINT (1).md`** | Design spec / gap list (G1–G16) for Grand Finals.                                                                                                                   |
+
+
+---
+
+## 4. Gaps & blueprint coverage (G1–G16)
+
+The blueprint file in-repo maps features to code paths. In short:
+
+- **G1, G7, G8:** curriculum difficulty, ELO, Nash/phase shifts → `curriculum.py`, `adversarial_loop.py`.  
+- **G2, G10, G11:** prompts, observation builder, hybrid judge → `prompts.py`, `observation_builder.py`, `judge.py`.  
+- **G3, G4, G16:** R_D / R_A math and NaN safety → `rewards.py`, `reward_fns.py`.  
+- **G8 (entropy / KL):** `EntropyGuardCallback` → `training/callbacks.py`.  
+- **G9, G12:** offline corpus, novelty → `generate_offline_corpus.py`, `novelty.py`.  
+- **G15:** T4-friendly small batches / 4-bit / short completions in `train_adversarial.py` (tune for your GPU).  
+- **UI / ops:** `realtime.py`, `/ui`, `/events`, trainer **start/stop** APIs.
+
+(Use `AGENTGUARD_FINAL_BLUEPRINT (1).md` for the authoritative line-by-line mapping you wrote for the competition.)
+
+---
+
+## 5. Data, contracts, and files
+
+- `**data/attack_corpus.json`** — Seed attacks for `AdversarialSystem.from_seed_attacks` (used by the server to build the default `AdversarialSystem`).  
+- `**data/benign_corpus.json**` — 20 **benign** examples per task (60 total); drives TN/FP in live adversarial (`BENIGN_EPISODE_PROB=0.30`) and in `generate_offline_corpus.py` (30% benign lines).  
+- `**data/holdout_attacks.json**` — **15** hand-authored malicious holds (5 per task) for **generalization**; `scripts/eval_before_after.py` loads **only** this file.  
+- `**data/training_started_at**` — Created when `train_adversarial.py` starts; gitignored. Eval asserts holdout mtime is **older** (committed before training).  
+- `**data/offline_corpus.jsonl**` — Generated; mixed malicious/benign for GRPO; ~30% benign.  
+- **Pydantic** is the **single contract** for actions, observations, and adversarial results — keeps HTTP and training aligned.
+
+**Reward pipeline (core env):** grader → raw utility + time + surcharges → `minmax_normalize` → `value ∈ [0,1]`.  
+**Adversarial pipeline:** attacker action → narrative → defender decision → outcome → `rewards.py` (and ELO/curriculum update).
+
+---
+
+## 6. API & real-time UI
+
+
+| Method | Path                        | Purpose                                                        |
+| ------ | --------------------------- | -------------------------------------------------------------- |
+| POST   | `/reset`                    | Start episode; optional `task`, `seed`                         |
+| POST   | `/step`                     | Apply action dict; returns `observation`, `reward`, `done`     |
+| GET    | `/state`                    | Environment snapshot                                           |
+| GET    | `/health`                   | Liveness                                                       |
+| GET    | `/`                         | Redirects to `/ui`                                             |
+| GET    | `/ui`                       | **Dashboard** (no build step)                                  |
+| POST   | `/trainer/start`            | Start **simulated** trainer: `policy` ∈ `heuristic` | `random` |
+| POST   | `/trainer/stop`             | Stop trainer                                                   |
+| GET    | `/trainer/status`           | Trainer state                                                  |
+| POST   | `/episode/run`              | One full episode, chosen policy                                |
+| GET    | `/events`                   | **SSE** stream: `episode.step`, `episode.ended`, `trainer.*`   |
+| POST   | `/adversarial/episode`      | Run one **adversarial** episode; emits events                  |
+| GET    | `/adversarial/curriculum`   | Curriculum + ELO                                               |
+| GET    | `/adversarial/corpus_stats` | Corpus size / mean novelty / per-task counts                   |
+
+
+> **Generalization:** run `**scripts/eval_before_after.py**` (uses `**data/holdout_attacks.json` only; optional lock vs `**data/training_started_at` after you train).  
+
+---
+
+## 7. Run locally
 
 ```bash
 cd agentguard-gym
+# Recommended: uv
 uv sync --extra dev
-PYTHONPATH=. python scripts/offline_baseline.py   # writes baseline_scores.json
-```
-
-Commit `**baseline_scores.json**` for reviewers. For the **LLM** baseline, run `python inference.py` with `HF_TOKEN` set (scores vary by model).
-
-### Reward math (audit trail)
-
-1. **Confusion utility** — weighted TP/TN/FP/FN with false-negative dominance (common in security eval literature).
-2. **Catastrophic FN surcharge** — extra penalty when the agent explicitly allows an obvious abuse (`fn_extra_`* in `RewardConfig`).
-3. **Time potential** — bounded `1/(1+delay)` style term inspired by MTTD/MTTR thinking and potential-based shaping (Ng et al., 1999).
-4. **Normalization** — `minmax_normalize(utility, worst, best)` → `[0, 1]` (`reward_math.py`).
-
-### Action / observation space
-
-- **Actions (`AgentGuardAction`)**  
-`defense ∈ {allow, sanitize, block, quarantine_memory, clear_exposed_secrets, audit_tool_chain}` + short `rationale`.
-- **Observations (`AgentGuardObservation`)**  
-`task`, `task_difficulty`, `narrative`, structured `artifacts[]`, `tool_trace[]`, optional `validation_error`.
-- **Rewards (`AgentGuardReward`)**  
-`value ∈ [0,1]`, `utility_raw` (pre-map), `outcome` (`tp|tn|fp|fn`), `partial_credit`.
-
-### Local quickstart
-
-```bash
-cd agentguard-gym
-python3 -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
-uvicorn server.app:app --reload --port 8001
-```
-
-### Live UI (real-time episodes/training view)
-
-The server ships with a **single-file dashboard** that streams episode steps in real time.
-
-```bash
-cd agentguard-gym
-uv sync --extra dev
+# Optional: full training stack
+uv sync --extra dev --extra grandfinals
 uv run server
+# Open http://127.0.0.1:7860/ui  (or http://127.0.0.1:$PORT/ui)
 ```
 
-Open `http://127.0.0.1:8000/ui`.
+- **OpenEnv validate:** `uv run openenv validate --verbose .`  
+- **Unit tests:** `uv run pytest`
 
-### Docker
+**Baseline inference (optional):** set `HF_TOKEN` / `API_BASE_URL` / `MODEL_NAME` and run `uv run python inference.py` if the script is present in your tree.
+
+---
+
+## 8. Training (GRPO / T4 / Colab / HF)
+
+1. **Generate data:** `uv run python scripts/generate_offline_corpus.py`
+2. **Install Unsloth** (or adapt the script to plain Transformers+PEFT) for your **CUDA** stack — T4 in Colab or Hugging Face Jobs is a typical target; keep `per_device_train_batch_size` small and use **4-bit** + gradient checkpointing as in `train_adversarial.py`.
+3. **Run:** `uv run python train_adversarial.py` (with `grandfinals` + `unsloth` + W&B as configured). Watch **fp_rate** and **win_rate** in W&B (from `WandbOutcomeMetricsCallback` + per-token tallies in `reward_fns.py`).  
+4. **Artifacts:** LoRA under `./checkpoints/defender/adapter_final` (as implemented).  
+5. **Entropy / KL:** tuned via `GRPOConfig.beta` and `EntropyGuardCallback`.
+
+**Colab / notebook:** use the same steps; mount repo, `uv` or `pip install -e ".[grandfinals]"`, then training script. Prefer a **T4** runtime; reduce `max_seq_length` / `num_generations` if OOM.
+
+**Hugging Face:** publish datasets/models/adapters to your org; use **Space** for the **environment UI**, and **Jobs** for GPU training, mirroring the commands above.
+
+---
+
+## 9. Deployment (Docker, Hugging Face Spaces)
 
 ```bash
 docker build -t agentguard-gym:local .
-docker run --rm -p 8001:8000 agentguard-gym:local
-curl -s http://127.0.0.1:8001/health
+docker run --rm -e PORT=7860 -p 7860:7860 agentguard-gym:local
+curl -s http://127.0.0.1:7860/health
 ```
 
-### Baseline inference + stdout contract
+- **Hugging Face Spaces (Docker SDK):** `Dockerfile` sets **`ENV PORT=7860`**, `EXPOSE 7860`, and `**app_port: 7860**` in this README so the default Space probe and health check match.  
+- You can still override with `-e PORT=...` for local smoke tests.
 
-```bash
-export HF_TOKEN=...   # or OPENAI_API_KEY
-export API_BASE_URL=https://router.huggingface.co/v1
-export MODEL_NAME=Qwen/Qwen2.5-72B-Instruct
-python inference.py
-```
+---
 
-The script prints `[START]`, one `[STEP]` per `env.step`, and a closing `[END]` even if something throws mid-episode.
+## 10. Validation, tests, and pre-submission
 
-### Baseline scores (local smoke, no LLM)
+- Follow `**PRE_SUBMISSION_CHECKLIST.md`**: sync deps → pytest → `openenv validate` → start server and exercise **trainer** + **adversarial** on `/ui`.  
+- Commit or attach `**baseline_scores.json`** when you use `scripts/offline_baseline.py`.  
+- For competition evidence, add learning curves (reward/entropy) from W&B or from JSONL if you log training metrics to `runs/`.
 
-Run `pytest tests/test_rewards_bounded.py` — numerical env tests only.  
-LLM baselines vary by provider; re-run `python inference.py` twice and compare means if you need stability checks.
+---
 
-### OpenEnv CLI note
+## 11. Environment variables
 
-`openenv validate` ships with `openenv-core` (requires **Python ≥3.10** on the validator machine). If your laptop is older, run validation inside the Docker image above.
 
-### Pre-submission checklist
+| Variable                      | Used for                                                    |
+| ----------------------------- | ----------------------------------------------------------- |
+| `PORT`                        | Uvicorn bind port (`server.app:main`); default **7860**     |
+| `HF_TOKEN` / `OPENAI_API_KEY` | Defender `DefenderBackend` and `inference.py` style clients |
+| `API_BASE_URL`                | OpenAI-compatible base URL (e.g. Hugging Face router)       |
+| `MODEL_NAME`                  | Chat model id                                               |
+| `ANTHROPIC_API_KEY`           | Optional attacker / scripts when using Anthropic            |
+| W&B                           | Project/name inside `train_adversarial.py` (edit as needed) |
 
-See `PRE_SUBMISSION_CHECKLIST.md`.
+
+---
+
+## 12. Documentation index
+
+
+| Doc                                 | Content                                                  |
+| ----------------------------------- | -------------------------------------------------------- |
+| `CALCULATIONS_REFERENCE.md`         | **AgentGuard** reward derivations, bounds, file pointers |
+| `PRE_SUBMISSION_CHECKLIST.md`       | End-to-end submit checklist                              |
+| `AGENTGUARD_FINAL_BLUEPRINT (1).md` | Grand Finals blueprint & gap list                        |
+| `openenv.yaml`                      | Machine-readable env manifest for OpenEnv / judges       |
+
+
+---
+
+### License and citation
+
+`BSD-3-Clause` (see `pyproject.toml`). If you cite the hackathon build, name **AgentGuard-Gym**, OpenEnv, OWASP Agentic AI Top-10 (2026) framing, and the GRPO/TRL/Unsloth stack you actually used in runs.
+
+---
+
+**Maintainer note:** This README is the single “story” for judges: *what you built*, *how each part works*, and *how to run it*. For formula-level audits, always cross-check `CALCULATIONS_REFERENCE.md` and `test_calculations_reference.py` against the code paths listed above.

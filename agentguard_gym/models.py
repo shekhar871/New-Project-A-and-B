@@ -215,8 +215,11 @@ class AdversarialEpisodeResult(BaseModel):
     difficulty_level: float = Field(ge=0.0, le=1.0)
     attack: AttackerAction
     defender_decision: Literal["block", "allow"]
+    # TP/TN/FP/FN: benign traffic yields TN (correct allow) or FP (false block).
     outcome: Literal["TP", "TN", "FP", "FN"]
     defender_won: bool
+    # False when the episode samples from benign_corpus (legitimate traffic).
+    is_malicious_scenario: bool = True
     reward_defender: float = Field(ge=0.0, le=1.0)
     reward_attacker: float
     novelty_score: float = Field(ge=0.0, le=1.0)

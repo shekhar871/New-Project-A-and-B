@@ -13,10 +13,8 @@ Single audit page for **both** hackathon environments. Each project stays **inde
 
 **Inference episode score (both `inference.py`):**
 
-
 \text{episodescore} = \frac{1}{T} \sum_{t=1}^{T} r_t
 \quad\text{where}\quad r_t = \texttt{reward.value} \in [0,1]
-
 
 Success flag (baseline scripts): \text{episodescore} \ge 0.65.
 
@@ -26,9 +24,7 @@ Success flag (baseline scripts): \text{episodescore} \ge 0.65.
 
 ### Clamp
 
-
 \text{clamp}_{[0,1]}(x) = \min(1,\max(0,x))
-
 
 **Code:** `aml_defense_gym/reward_math.py` → `clamp01` (AML). AgentGuard uses the same logic inside `minmax_normalize` for the final clip.
 
@@ -36,9 +32,7 @@ Success flag (baseline scripts): \text{episodescore} \ge 0.65.
 
 For raw utility U with conservative bounds [U_{\min}, U_{\max}]:
 
-
 \text{norm}(U) = \text{clamp}*{[0,1]}\left(\frac{U - U*{\min}}{U_{\max} - U_{\min}}\right)
-
 
 If U_{\max} \le U_{\min}, the code falls back to \text{clamp}_{[0,1]}(U).
 
@@ -52,9 +46,7 @@ If U_{\max} \le U_{\min}, the code falls back to \text{clamp}_{[0,1]}(U).
 
 Let `outcome` \in \text{tp},\text{tn},\text{fp},\text{fn}. Base utility (before timing / extras):
 
-
 U_{\text{base}} = w_{\text{outcome}} + f_{\text{action}}
-
 
 **Defaults** (`RewardConfig` in `agentguard_gym/graders.py`):
 
@@ -76,8 +68,8 @@ U \leftarrow U \times \texttt{partialauditfraction} (default `**0.82`**).
 U \leftarrow U \times 0.9.
 - **False negative surcharges** (extra penalty when the attack is let through):
   - Prompt injection: `+ fn_extra_prompt` = `**-3.0`**
-  - SSRF: `+ fn_extra_ssrf` = `**-4.0**`
-  - Memory: `+ fn_extra_memory` = `**-3.5**`
+  - SSRF: `+ fn_extra_ssrf` = `**-4.0`**
+  - Memory: `+ fn_extra_memory` = `**-3.5`**
 
 (Here “+” means adding a negative number.)
 
@@ -85,32 +77,24 @@ U \leftarrow U \times 0.9.
 
 Let `detected_step` / `remediated_step` be step indices maintained by the environment when a threat is handled correctly.
 
-
 \phi_{\text{time}} =
 \frac{\alpha}{1 + d_{\text{det}}}
 
 - \frac{\beta}{1 + \max(0, d_{\text{rem}} - d_{\text{det}})}
 
+**Defaults:** \alpha = `mttd_scale` `**0.15`**, \beta = `mttr_scale` `**0.1`**.
 
-**Defaults:** \alpha = `mttd_scale` `**0.15`**, \beta = `mttr_scale` `**0.1**`.
-
-**Code:** `reward_math.py` → `mttd_mttr_step_potential`; called from each `grade_`* in `graders.py`.
+**Code:** `reward_math.py` → `mttd_mttr_step_potential`; called from each `grade`_* in `graders.py`.
 
 ### Step 4 — Raw utility & normalization bounds
 
-
 U_{\text{raw}} = U_{\text{base}} + \phi_{\text{time}} + \text{surcharges/multiples as above}
-
 
 **Bounds for min–max** (`cyber_minmax_bounds`):
 
-
 U_{\min} = w_{\text{fn}} + f_{\text{action}} + \min(\texttt{fnextraprompt}, \texttt{fnextrassrf}, \texttt{fnextramemory})
 
-
-
 U_{\max} = w_{\text{tp}} + \texttt{mttdscale} + \texttt{mttrscale} + f_{\text{action}}
-
 
 **Displayed reward:** r = \text{norm}(U_{\text{raw}}) → stored in `AgentGuardReward.value`.
 
@@ -158,13 +142,9 @@ U_{\max} = w_{\text{tp}} + \texttt{mttdscale} + \texttt{mttrscale} + f_{\text{ac
 
 **Normalization:**
 
-
 U_{\min} = C_{\text{FN}} + f,\quad U_{\max} = C_{\text{TP}} + f
 
-
-
 r = \text{norm}(U)
-
 
 **Missing disposition:** U = -2.0 with **sanctions** bounds (same U_{\min}, U_{\max}).
 
@@ -174,9 +154,7 @@ r = \text{norm}(U)
 
 **Normalization interval:** [U_{\min}, U_{\max}] = [-5, 2].
 
-
 r = \text{norm}(U)
-
 
 **Validation / task mismatch** uses the **EDD** interval for mapping fixed penalties (−3.0, −1.8) — see `environment.py`.
 
@@ -186,13 +164,9 @@ Let L_i \in 0,1 be labels (`is_laundering`), s_i \in [0,1] agent scores.
 Let `recall@k` = fraction of illicit rows captured in top‑k by s (descending).  
 Let `fp_pressure` = fraction of **benign** rows inside that top‑k.
 
-
 k = \max\bigl(1,\ \min(5,\ | i: L_i=1  | + 1)\bigr)
 
-
-
 U_{\text{raw}} = \text{clamp}_{[0,1]}\bigl(0.65 \cdot \text{recall@k} + 0.35 \cdot (1 - \text{fppressure})\bigr)
-
 
 Here **no extra min–max**: r = U_{\text{raw}} already in [0,1].
 

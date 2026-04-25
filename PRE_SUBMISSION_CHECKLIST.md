@@ -30,8 +30,8 @@ uv run server
 
 Then open:
 
-- `http://127.0.0.1:8000/ui` (dashboard)
-- `http://127.0.0.1:8000/docs` (API)
+- `http://127.0.0.1:7860/ui` (dashboard)
+- `http://127.0.0.1:7860/docs` (API)
 
 On the dashboard:
 
