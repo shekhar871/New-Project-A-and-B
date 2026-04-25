@@ -33,4 +33,4 @@ grandfinals = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["agentguard_gym*"]
+include = ["agentguard_gym*", "server*"]

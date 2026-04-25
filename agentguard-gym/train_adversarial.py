@@ -1,13 +1,15 @@
 # train_adversarial.py — complete, runnable training script
 
-import os, json
+import json
+from pathlib import Path
+
 from datasets import Dataset
+from trl import GRPOConfig, GRPOTrainer
 from unsloth import FastLanguageModel
-from trl import GRPOTrainer, GRPOConfig
 import wandb
 
-from agentguard_gym.training.reward_fns import defender_reward_fn
-from agentguard_gym.training.callbacks import EntropyGuardCallback
+from agentguard_gym.training.callbacks import EntropyGuardCallback, WandbOutcomeMetricsCallback
+from agentguard_gym.training.reward_fns import defender_reward_fn, reset_outcome_tally
 
 # ── Config ──────────────────────────────────────────────
 MODEL_NAME = "unsloth/Qwen2.5-7B-Instruct-bnb-4bit"
@@ -45,6 +47,12 @@ def _build_narrative(item: dict) -> str:
         return f"Memory write: \"{text}\""
 
 def main():
+    data_dir = Path("data")
+    data_dir.mkdir(parents=True, exist_ok=True)
+    # Lock ordering: holdout_attacks.json must be older than this file (see eval_before_after.py).
+    (data_dir / "training_started_at").touch()
+    reset_outcome_tally()
+
     wandb.init(project=WANDB_PROJECT, name="defender-grpo-v2")
     
     # Load model (4-bit QLoRA)
@@ -95,6 +103,7 @@ def main():
         processing_class=tokenizer,
         callbacks=[
             EntropyGuardCallback(beta_0=0.04, decay=0.5, t_max=200),
+            WandbOutcomeMetricsCallback(),
         ],
     )
     
