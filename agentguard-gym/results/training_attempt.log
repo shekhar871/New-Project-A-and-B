@@ -1,0 +1,103 @@
+[WARN] Unsloth not found — using transformers+PEFT+4bit fallback (install unsloth for best speed)
+[info] SFT warmstart file present: data/sft_warmstart.json — optional phase-1 SFT is project-specific; GRPO below is the default path.
+Traceback (most recent call last):
+  File "/Users/shekharjadhav/Downloads/SCALAR/agentguard-gym/.venv/lib/python3.11/site-packages/httpx/_transports/default.py", line 101, in map_httpcore_exceptions
+    yield
+  File "/Users/shekharjadhav/Downloads/SCALAR/agentguard-gym/.venv/lib/python3.11/site-packages/httpx/_transports/default.py", line 250, in handle_request
+    resp = self._pool.handle_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/shekharjadhav/Downloads/SCALAR/agentguard-gym/.venv/lib/python3.11/site-packages/httpcore/_sync/connection_pool.py", line 256, in handle_request
+    raise exc from None
+  File "/Users/shekharjadhav/Downloads/SCALAR/agentguard-gym/.venv/lib/python3.11/site-packages/httpcore/_sync/connection_pool.py", line 236, in handle_request
+    response = connection.handle_request(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/shekharjadhav/Downloads/SCALAR/agentguard-gym/.venv/lib/python3.11/site-packages/httpcore/_sync/http_proxy.py", line 297, in handle_request
+    raise ProxyError(msg)
+httpcore.ProxyError: 403 Forbidden
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/shekharjadhav/Downloads/SCALAR/agentguard-gym/.venv/lib/python3.11/site-packages/transformers/configuration_utils.py", line 728, in _get_config_dict
+    resolved_config_file = cached_file(
+                           ^^^^^^^^^^^^
+  File "/Users/shekharjadhav/Downloads/SCALAR/agentguard-gym/.venv/lib/python3.11/site-packages/transformers/utils/hub.py", line 278, in cached_file
+    file = cached_files(path_or_repo_id=path_or_repo_id, filenames=[filename], **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/shekharjadhav/Downloads/SCALAR/agentguard-gym/.venv/lib/python3.11/site-packages/transformers/utils/hub.py", line 512, in cached_files
+    raise e
+  File "/Users/shekharjadhav/Downloads/SCALAR/agentguard-gym/.venv/lib/python3.11/site-packages/transformers/utils/hub.py", line 422, in cached_files
+    hf_hub_download(
+  File "/Users/shekharjadhav/Downloads/SCALAR/agentguard-gym/.venv/lib/python3.11/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/Users/shekharjadhav/Downloads/SCALAR/agentguard-gym/.venv/lib/python3.11/site-packages/huggingface_hub/file_download.py", line 995, in hf_hub_download
+    return _hf_hub_download_to_cache_dir(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/shekharjadhav/Downloads/SCALAR/agentguard-gym/.venv/lib/python3.11/site-packages/huggingface_hub/file_download.py", line 1070, in _hf_hub_download_to_cache_dir
+    (url_to_download, etag, commit_hash, expected_size, xet_file_data, head_call_error) = _get_metadata_or_catch_error(
+                                                                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/shekharjadhav/Downloads/SCALAR/agentguard-gym/.venv/lib/python3.11/site-packages/huggingface_hub/file_download.py", line 1665, in _get_metadata_or_catch_error
+    metadata = get_hf_file_metadata(
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/shekharjadhav/Downloads/SCALAR/agentguard-gym/.venv/lib/python3.11/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/Users/shekharjadhav/Downloads/SCALAR/agentguard-gym/.venv/lib/python3.11/site-packages/huggingface_hub/file_download.py", line 1587, in get_hf_file_metadata
+    response = _httpx_follow_relative_redirects_with_backoff(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/shekharjadhav/Downloads/SCALAR/agentguard-gym/.venv/lib/python3.11/site-packages/huggingface_hub/utils/_http.py", line 685, in _httpx_follow_relative_redirects_with_backoff
+    response = http_backoff(
+               ^^^^^^^^^^^^^
+  File "/Users/shekharjadhav/Downloads/SCALAR/agentguard-gym/.venv/lib/python3.11/site-packages/huggingface_hub/utils/_http.py", line 559, in http_backoff
+    return next(
+           ^^^^^
+  File "/Users/shekharjadhav/Downloads/SCALAR/agentguard-gym/.venv/lib/python3.11/site-packages/huggingface_hub/utils/_http.py", line 467, in _http_backoff_base
+    response = client.request(method=method, url=url, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/shekharjadhav/Downloads/SCALAR/agentguard-gym/.venv/lib/python3.11/site-packages/httpx/_client.py", line 825, in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/shekharjadhav/Downloads/SCALAR/agentguard-gym/.venv/lib/python3.11/site-packages/httpx/_client.py", line 914, in send
+    response = self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/shekharjadhav/Downloads/SCALAR/agentguard-gym/.venv/lib/python3.11/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/shekharjadhav/Downloads/SCALAR/agentguard-gym/.venv/lib/python3.11/site-packages/httpx/_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/shekharjadhav/Downloads/SCALAR/agentguard-gym/.venv/lib/python3.11/site-packages/httpx/_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/shekharjadhav/Downloads/SCALAR/agentguard-gym/.venv/lib/python3.11/site-packages/httpx/_transports/default.py", line 249, in handle_request
+    with map_httpcore_exceptions():
+  File "/opt/homebrew/Cellar/python@3.11/3.11.14_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/contextlib.py", line 158, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "/Users/shekharjadhav/Downloads/SCALAR/agentguard-gym/.venv/lib/python3.11/site-packages/httpx/_transports/default.py", line 118, in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+httpx.ProxyError: 403 Forbidden
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/shekharjadhav/Downloads/SCALAR/agentguard-gym/train_adversarial.py", line 191, in <module>
+    main()
+  File "/Users/shekharjadhav/Downloads/SCALAR/agentguard-gym/train_adversarial.py", line 145, in main
+    model, tokenizer = _load_model_and_tokenizer()
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/shekharjadhav/Downloads/SCALAR/agentguard-gym/train_adversarial.py", line 106, in _load_model_and_tokenizer
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_HF, trust_remote_code=True)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/shekharjadhav/Downloads/SCALAR/agentguard-gym/.venv/lib/python3.11/site-packages/transformers/models/auto/tokenization_auto.py", line 690, in from_pretrained
+    config = PreTrainedConfig.from_pretrained(pretrained_model_name_or_path, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/shekharjadhav/Downloads/SCALAR/agentguard-gym/.venv/lib/python3.11/site-packages/transformers/configuration_utils.py", line 632, in from_pretrained
+    config_dict, kwargs = cls.get_config_dict(pretrained_model_name_or_path, **kwargs)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/shekharjadhav/Downloads/SCALAR/agentguard-gym/.venv/lib/python3.11/site-packages/transformers/configuration_utils.py", line 673, in get_config_dict
+    config_dict, kwargs = cls._get_config_dict(pretrained_model_name_or_path, **kwargs)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/shekharjadhav/Downloads/SCALAR/agentguard-gym/.venv/lib/python3.11/site-packages/transformers/configuration_utils.py", line 750, in _get_config_dict
+    raise OSError(
+OSError: Can't load the configuration of 'sshleifer/tiny-gpt2'. If you were trying to load it from 'https://huggingface.co/models', make sure you don't have a local directory with the same name. Otherwise, make sure 'sshleifer/tiny-gpt2' is the correct path to a directory containing a config.json file
