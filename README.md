@@ -42,7 +42,7 @@ Real-world **defensive security operations** simulator for agentic AI: analysts 
 
 ### Calculations & equations (both gyms)
 
-- **Full audit (identical copy in this repo):** [`CALCULATIONS_REFERENCE.md`](./CALCULATIONS_REFERENCE.md) — every formula, bound, and file pointer for **AgentGuard-Gym and AML-DefenseGym** so you can verify algorithms in one sitting.
+- **Full audit (identical copy in this repo):** `[CALCULATIONS_REFERENCE.md](./CALCULATIONS_REFERENCE.md)` — every formula, bound, and file pointer for **AgentGuard-Gym and AML-DefenseGym** so you can verify algorithms in one sitting.
 
 ### OpenEnv validation (local)
 
@@ -61,7 +61,7 @@ uv sync --extra dev
 PYTHONPATH=. python scripts/offline_baseline.py   # writes baseline_scores.json
 ```
 
-Commit **`baseline_scores.json`** for reviewers. For the **LLM** baseline, run `python inference.py` with `HF_TOKEN` set (scores vary by model).
+Commit `**baseline_scores.json**` for reviewers. For the **LLM** baseline, run `python inference.py` with `HF_TOKEN` set (scores vary by model).
 
 ### Reward math (audit trail)
 
@@ -87,6 +87,18 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 uvicorn server.app:app --reload --port 8001
 ```
+
+### Live UI (real-time episodes/training view)
+
+The server ships with a **single-file dashboard** that streams episode steps in real time.
+
+```bash
+cd agentguard-gym
+uv sync --extra dev
+uv run server
+```
+
+Open `http://127.0.0.1:8000/ui`.
 
 ### Docker
 
@@ -115,3 +127,7 @@ LLM baselines vary by provider; re-run `python inference.py` twice and compare m
 ### OpenEnv CLI note
 
 `openenv validate` ships with `openenv-core` (requires **Python ≥3.10** on the validator machine). If your laptop is older, run validation inside the Docker image above.
+
+### Pre-submission checklist
+
+See `PRE_SUBMISSION_CHECKLIST.md`.
