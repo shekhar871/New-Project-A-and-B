@@ -1,16 +1,15 @@
 ---
-
-## title: AgentGuard-Gym
-
+title: AgentGuard-Gym
 emoji: 🛡️
 colorFrom: blue
 colorTo: red
 sdk: docker
+app_port: 7860
 pinned: false
 license: bsd-3-clause
 tags:
-
-- openenv
+  - openenv
+---
 
 # AgentGuard-Gym
 
