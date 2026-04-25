@@ -126,3 +126,99 @@ class StepResult(BaseModel):
     reward: AgentGuardReward
     done: bool
     info: Dict[str, Any] = Field(default_factory=dict)
+
+
+# -----------------------------
+# Grand Finals (v4) add-ons
+# -----------------------------
+
+
+class CyberAdversarialTaskType(str, Enum):
+    """
+    Task names used by the Grand Finals adversarial RL blueprint.
+
+    We keep these separate from `CyberTaskType` to avoid breaking Round-1 compatible enums
+    (`memory_poisoning_privilege` naming) while still supporting the blueprint's naming.
+    """
+
+    PROMPT_INJECTION = "prompt_injection"
+    TOOL_MISUSE_SSRF = "tool_misuse_ssrf"
+    MEMORY_POISONING = "memory_poisoning"
+
+
+class AttackerAction(BaseModel):
+    model_config = ConfigDict(extra="forbid", validate_assignment=True)
+
+    attack_text: str = Field(min_length=10, max_length=2000)
+    attack_type: str = Field(min_length=1, max_length=128)
+    difficulty_score: float = Field(ge=0.0, le=1.0)
+    target_task: CyberAdversarialTaskType
+    reasoning: Optional[str] = Field(default=None, max_length=4096)
+    low_novelty: bool = False
+
+
+class CorpusEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    attack_id: str
+    attack_text: str
+    attack_type: str
+    task: CyberAdversarialTaskType
+    embedding: Optional[List[float]] = None
+    created_at_ms: int
+    novelty_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    times_blocked: int = Field(default=0, ge=0)
+
+
+class JudgeVerdict(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    attack_sophistication: float = Field(ge=0.0, le=1.0)
+    defense_quality: float = Field(ge=0.0, le=1.0)
+    outcome_correct: bool
+    reasoning: str = Field(max_length=2048)
+    is_parsable: bool = True
+    raw_output: Optional[str] = None
+
+
+class ELOTracker(BaseModel):
+    """
+    Lightweight ELO tracker (Grand Finals blueprint G7).
+    Used to derive a difficulty scalar via a sigmoid of ELO difference.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    attacker_elo: float = 1200.0
+    defender_elo: float = 1200.0
+    k_factor: float = 32.0
+
+    def update(self, defender_won: bool) -> None:
+        expected_def = 1.0 / (1.0 + 10.0 ** ((self.attacker_elo - self.defender_elo) / 400.0))
+        score_def = 1.0 if defender_won else 0.0
+        delta = self.k_factor * (score_def - expected_def)
+        self.defender_elo = max(800.0, min(2400.0, self.defender_elo + delta))
+        self.attacker_elo = max(800.0, min(2400.0, self.attacker_elo - delta))
+
+    def difficulty(self, lam: float = 2.0) -> float:
+        import math
+
+        elo_diff = (self.attacker_elo - self.defender_elo) / 400.0
+        return 1.0 / (1.0 + math.exp(-lam * elo_diff))
+
+
+class AdversarialEpisodeResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    episode_id: str
+    task: CyberAdversarialTaskType
+    difficulty_level: float = Field(ge=0.0, le=1.0)
+    attack: AttackerAction
+    defender_decision: Literal["block", "allow"]
+    outcome: Literal["TP", "TN", "FP", "FN"]
+    defender_won: bool
+    reward_defender: float = Field(ge=0.0, le=1.0)
+    reward_attacker: float
+    novelty_score: float = Field(ge=0.0, le=1.0)
+    judge_verdict: Optional[JudgeVerdict] = None
+    generalization_test: bool = False

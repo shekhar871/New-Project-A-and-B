@@ -1,7 +1,88 @@
 name: agentguard-gym
-version: "0.2.0"
+version: "2.0.0"
 description: >
-  Defensive cybersecurity gym (prompt injection, SSRF/tool misuse, memory poisoning) with
-  deterministic graders normalized to [0, 1].
+  Adversarial self-play environment for training AI security defenders.
+  Attacker LLM generates novel prompt injection, SSRF, and memory poisoning attacks.
+  Defender LLM learns to classify and block them via GRPO.
+  Curriculum difficulty adapts based on rolling defender win rate and ELO tracking.
+
 tags:
   - openenv
+  - security
+  - adversarial
+  - multi-agent
+  - curriculum-learning
+
+server:
+  host: "0.0.0.0"
+  port: 7860
+  health_endpoint: "/health"
+
+modes:
+  - name: standard
+    description: "Fixed attack corpus, deterministic episodes"
+  - name: adversarial
+    description: "LLM-generated novel attacks with ELO curriculum"
+
+observation_space:
+  type: object
+  properties:
+    narrative: {type: string}
+    tool_trace: {type: array}
+    artifacts: {type: array}
+    episode_id: {type: string}
+    step_idx: {type: integer}
+    task_type:
+      type: string
+      enum: [prompt_injection, tool_misuse_ssrf, memory_poisoning]
+
+action_space:
+  type: object
+  required: [decision]
+  properties:
+    decision:
+      type: string
+      enum: [block, allow, sanitize, quarantine_memory, clear_exposed_secrets, audit_tool_chain]
+    confidence: {type: number, minimum: 0.0, maximum: 1.0}
+    threat_type: {type: string, nullable: true}
+    reasoning: {type: string}
+
+reward_space:
+  type: number
+  minimum: 0.0
+  maximum: 1.0
+
+endpoints:
+  - {path: /reset, method: POST}
+  - {path: /step, method: POST}
+  - {path: /state, method: GET}
+  - {path: /adversarial/episode, method: POST}
+  - {path: /adversarial/curriculum, method: GET}
+  - {path: /adversarial/corpus_stats, method: GET}
+  - {path: /adversarial/generalization_score, method: GET}
+
+metadata:
+  domain: "AI Security / Agentic AI Safety"
+  # RFC 004 COMPLIANCE DECLARATION:
+  # This environment natively implements OpenEnv RFC 004 (Delayed rewards for
+  # trajectory-based scoring). The R_D confusion matrix reward (TP/TN/FP/FN)
+  # is computed at episode end based on the full interaction trajectory —
+  # exactly the delayed trajectory-based scoring RFC 004 defines.
+  openenv_rfc_compliance:
+    - "RFC 001: Baseline API and Interface Specifications"
+    - "RFC 002: Discoverability of environment tools by agents"
+    - "RFC 004: Delayed rewards for trajectory-based scoring (NATIVE IMPLEMENTATION)"
+  # OWASP Agentic AI Top-10 (2026) task mapping:
+  owasp_task_mapping:
+    prompt_injection: "ASI01 — Agent Goal Hijack"
+    tool_misuse_ssrf: "ASI02 — Tool Misuse & Exploitation"
+    memory_poisoning: "ASI06 — Memory & Context Poisoning"
+  paper_references:
+    - "GRPO: Shao et al., 2024"
+    - "DAPO: Yu et al., 2025 (Clip-Higher)"
+    - "REPO: 2025 (Entropy Preservation)"
+    - "GTPO: 2025 (Entropy-based collapse detection)"
+    - "SSP: Safety Self-Play, 2026"
+    - "RvB: Red vs Blue AI Hardening, 2026"
+    - "SEAS: Self-Evolving Adversarial Safety, 2025"
+    - "OWASP Agentic AI Top-10, 2026 (ASI01, ASI02, ASI06)"
