@@ -2,6 +2,7 @@
 # Works with or without Unsloth (transformers+PEFT+4bit fallback).
 
 import json
+import os
 from pathlib import Path
 
 import torch
@@ -32,9 +33,9 @@ except ImportError:
 
     print("[WARN] Unsloth not found — using transformers+PEFT+4bit fallback (install unsloth for best speed)")
 
-# ── Config ──────────────────────────────────────────────
-MODEL_UNSLOTH = "unsloth/Qwen2.5-7B-Instruct-bnb-4bit"
-MODEL_HF = "Qwen/Qwen2.5-7B-Instruct"
+# ── Config (override via env) ────────────────────────────
+MODEL_UNSLOTH = str(os.getenv("MODEL_UNSLOTH", "unsloth/Qwen2.5-7B-Instruct-bnb-4bit"))
+MODEL_HF = str(os.getenv("MODEL_HF", "Qwen/Qwen2.5-7B-Instruct"))
 OUTPUT_DIR = "./checkpoints/defender"
 WANDB_PROJECT = "agentguard-adversarial"
 CORPUS_PATH = "data/offline_corpus.jsonl"
@@ -92,10 +93,15 @@ def _load_model_and_tokenizer():
         )
         return model, tokenizer
 
-    bnb = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_use_double_quant=True,
+    use_4bit = bool(torch.cuda.is_available())
+    bnb = (
+        BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_use_double_quant=True,
+        )
+        if use_4bit
+        else None
     )
     tokenizer = AutoTokenizer.from_pretrained(MODEL_HF, trust_remote_code=True)
     if getattr(tokenizer, "pad_token", None) is None and tokenizer.eos_token is not None:
@@ -103,9 +109,9 @@ def _load_model_and_tokenizer():
     model = AutoModelForCausalLM.from_pretrained(
         MODEL_HF,
         quantization_config=bnb,
-        device_map="auto",
+        device_map=("auto" if use_4bit else None),
         trust_remote_code=True,
-        torch_dtype=torch.bfloat16,
+        torch_dtype=(torch.bfloat16 if use_4bit else None),
     )
     peft = LoraConfig(
         r=16,
