@@ -1,6 +1,15 @@
 .env
 data/training_started_at
 .mplconfig/
-runs/
-results/
+# Large/ephemeral training outputs
 checkpoints/
+
+# Keep repo clean but allow committed evidence artifacts:
+runs/*
+!runs/training_metrics.jsonl
+
+results/*
+!results/training_curve.png
+!results/baseline_rollout.txt
+!results/before_after.json
+!results/training_attempt.log
