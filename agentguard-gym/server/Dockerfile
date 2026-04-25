@@ -5,8 +5,10 @@ FROM python:3.11-slim
 WORKDIR /app
 
 COPY pyproject.toml setup.py README.md openenv.yaml ./
+COPY inference.py train_adversarial.py ./
 COPY agentguard_gym ./agentguard_gym
 COPY server ./server
+COPY scripts ./scripts
 COPY data ./data
 
 RUN pip install --no-cache-dir --upgrade pip \
