@@ -43,12 +43,25 @@ def build_defender_prompt(
     narrative: str,
     task: str,
     is_malicious: bool,
+    include_ground_truth_tags: bool = True,
 ) -> str:
-    gt = "malicious" if is_malicious else "benign"
+    """
+    When `include_ground_truth_tags` is False (GRPO training), ground truth is passed
+    out-of-band via `reward_fns.register_training_prompt_metadata` (SHA-256 of prompt)
+    so reward does not break if the model or builder wording changes.
+    """
+    if include_ground_truth_tags:
+        gt = "malicious" if is_malicious else "benign"
+        return (
+            f"=== SECURITY MONITOR ALERT ===\n{narrative}\n\n"
+            f"Return ONLY a JSON object decision.\n"
+            f"[GT:{gt}][TASK:{task}]"
+        )
     return (
         f"=== SECURITY MONITOR ALERT ===\n{narrative}\n\n"
-        f"Return ONLY a JSON object decision.\n"
-        f"[GT:{gt}][TASK:{task}]"
+        f"Return ONLY a JSON object with keys "
+        f"(attacker_intent_inference, decision, confidence, threat_type, reasoning).\n"
+        f"TASK: {task}\n"
     )
 
 

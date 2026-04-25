@@ -1,2 +1,6 @@
 .env
 data/training_started_at
+.mplconfig/
+runs/
+results/
+checkpoints/

@@ -1,10 +1,46 @@
 # agentguard_gym/training/callbacks.py
 # Based on: REPO (2025), GTPO (2025), CE-GPPO (2025), Entropy Scheduling paper (2025)
 
+import json
 import math
+from pathlib import Path
+from typing import Any, Optional
+
 from transformers import TrainerCallback, TrainerState, TrainerControl
 
 from agentguard_gym.training.reward_fns import get_outcome_metrics
+
+
+class JsonlTrainingMetricsCallback(TrainerCallback):
+    """
+    Append one JSON line per on_log to runs/training_metrics.jsonl for offline plots
+    (scripts/plot_training_metrics.py) when judges cannot access W&B.
+    """
+
+    def __init__(self, path: str = "runs/training_metrics.jsonl") -> None:
+        self.path = path
+
+    def on_log(
+        self,
+        args: Any,
+        state: TrainerState,
+        control: TrainerControl,
+        logs: Optional[dict] = None,
+        **kwargs: Any,
+    ) -> TrainerControl:
+        if not logs:
+            return control
+        p = Path(self.path)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        row: dict = {
+            "step": int(state.global_step),
+            "entropy": logs.get("entropy") or logs.get("train/entropy"),
+            "loss": logs.get("loss") or logs.get("train/loss"),
+        }
+        row.update({k: float(v) for k, v in get_outcome_metrics().items() if k in ("fp_rate", "win_rate")})
+        with p.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(row, default=str) + "\n")
+        return control
 
 
 class WandbOutcomeMetricsCallback(TrainerCallback):
