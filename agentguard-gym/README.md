@@ -125,7 +125,7 @@ flowchart LR
 | `**observation_builder.py`** | Builds human/LLM-readable **defender** observation and `build_defender_prompt` (used in GRPO data loading).                                                                                                                                                                            |
 | `**novelty.py`**             | `novelty_score` for diversity vs the rolling corpus (attacker signal + logging).                                                                                                                                                                                                       |
 | `**attacker.py`**            | `Attacker`, `AttackCorpus`: sample/generate `AttackerAction` per task; optional **Anthropic** path or deterministic fallbacks.                                                                                                                                                         |
-| `**judge.py`**               | Hybrid **rule** scoring + optional **LLM** judge; produces `judge_quality` for R_A.                                                                                                                                                                                                    |
+| `**judge.py`**               | Hybrid rule scoring (**continuous 0.0–1.0, not discrete**) + optional LLM judge; produces `judge_quality` for R_A.                                                                                                                                                                     |
 | `**rewards.py`**             | `defender_reward_raw` / `defender_reward_normalize`, `attacker_reward`, `safe_reward` (NaN/inf guard).                                                                                                                                                                                 |
 | `**curriculum.py`**          | `CurriculumManager`: warmup, **win-rate** difficulty, **Nash** detector (low variance → bump difficulty, phase list).                                                                                                                                                                  |
 | `**adversarial_loop.py`**    | `AdversarialSystem`, `DefenderBackend`: with probability **0.30** (see `BENIGN_EPISODE_PROB`) serves **benign** traffic (TN/FP) from `data/benign_corpus.json`; otherwise the attacker produces a malicious example (TP/FN). ELO/curriculum use **defender_won = outcome ∈ {TP, TN}**. |
@@ -150,9 +150,9 @@ flowchart LR
 | `**inference.py`**                         | Reproducible **CPU** holdout printout: `uv run python inference.py`.                                                                                |
 | `**scripts/generate_offline_corpus.py`**   | Writes `data/offline_corpus.jsonl` (mixed benign/malicious) for GRPO.                                                                               |
 | `**scripts/offline_baseline.py`**          | No-API rough scores → `baseline_scores.json`.                                                                                                       |
-| `**scripts/eval_before_after.py**`         | **generalization_score** on **data/holdout_attacks.json**; optional mtime lock.                                                                     |
+| `**scripts/eval_before_after.py`**         | **generalization_score** on **data/holdout_attacks.json**; optional mtime lock.                                                                     |
 | `**scripts/plot_training_metrics.py`**     | `runs/training_metrics.jsonl` → `results/training_curve.png` (needs `matplotlib`).                                                                  |
-| `**scripts/generate_demo_cache.py**`       | G14: placeholder for demo cache (`results/demo_cache_hint.txt`).                                                                                    |
+| `**scripts/generate_demo_cache.py`**       | G14: placeholder for demo cache (`results/demo_cache_hint.txt`).                                                                                    |
 | `**tests/test_rewards_bounded.py`**        | Invariant: rewards in range + smoke.                                                                                                                |
 | `**tests/test_calculations_reference.py`** | Unit checks vs documented formulas.                                                                                                                 |
 
@@ -162,7 +162,7 @@ flowchart LR
 
 | File                                    | Role                                                                                                                                                                |
 | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `**openenv.yaml**`                      | Name, version, **tags**, server hints, **observation/action/reward** schema sketch, `modes` (standard / adversarial), **RFC** and **OWASP** metadata for reviewers. |
+| `**openenv.yaml`**                      | Name, version, **tags**, server hints, **observation/action/reward** schema sketch, `modes` (standard / adversarial), **RFC** and **OWASP** metadata for reviewers. |
 | `**pyproject.toml`**                    | Dependencies, `server` script, optional `grandfinals` extras, package discovery (includes `server*`).                                                               |
 | `**Dockerfile`**                        | `ENV PORT=7860`, `EXPOSE 7860`, health check + `uvicorn` on `${PORT:-7860}`; copies `data/` for seeds, benign corpus, and holdout.                                  |
 | `**PRE_SUBMISSION_CHECKLIST.md`**       | Ordered verification before hackathon submit.                                                                                                                       |
@@ -180,7 +180,7 @@ The blueprint file in-repo maps features to code paths. In short:
 - **G2, G10, G11:** prompts, observation builder, hybrid judge → `prompts.py`, `observation_builder.py`, `judge.py`.  
 - **G3, G4, G16:** R_D / R_A math and NaN safety → `rewards.py`, `reward_fns.py`.  
 - **G5 (VRAM / LoRA):** `train_adversarial.py` — 4bit QLoRA, `r=16`, 7B-class model, G=4 generations; PEFT path mirrors target modules.  
-- **G6 (SFT warmstart):** `data/sft_warmstart.json` (empty `[]` placeholder); optional SFT phase before GRPO in full pipelines.  
+- **G6 (SFT warmstart):** `data/sft_warmstart.json` — **15 gold examples (5/task), committed**.  
 - **G8 (entropy / KL):** `EntropyGuardCallback` → `training/callbacks.py`.  
 - **G9, G12:** offline corpus, novelty (embedding or BoW) → `generate_offline_corpus.py`, `novelty.py`.  
 - **G13 (experience replay):** `ExperienceBuffer` in `adversarial_loop.py` (ring buffer placeholder for future GRPO dataloader).  
@@ -199,8 +199,8 @@ The blueprint file in-repo maps features to code paths. In short:
 - `**data/holdout_attacks.json`** — **15** hand-authored malicious holds (5 per task) for **generalization**; `scripts/eval_before_after.py` loads **only** this file.  
 - `**data/training_started_at`** — Created when `train_adversarial.py` starts; gitignored. Eval asserts holdout mtime is **older** (committed before training).  
 - `**data/offline_corpus.jsonl`** — Generated; mixed malicious/benign for GRPO; ~30% benign.  
-- `**data/sft_warmstart.json`** — Optional SFT examples for G6 (empty `[]` until you add pairs).  
-- `**runs/training_metrics.jsonl**` — One JSON line per `on_log` during GRPO (from `JsonlTrainingMetricsCallback`).  
+- `**data/sft_warmstart.json`** — **15 gold SFT examples (5 per task)** for format warmstart.  
+- `**runs/training_metrics.jsonl`** — One JSON line per `on_log` during GRPO (from `JsonlTrainingMetricsCallback`).  
 - `**results/training_curve.png**` — From `scripts/plot_training_metrics.py` after training.  
 - **Pydantic** is the **single contract** for actions, observations, and adversarial results — keeps HTTP and training aligned.
 
