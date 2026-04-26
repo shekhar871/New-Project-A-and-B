@@ -1,8 +1,6 @@
 ---
-
-## title: AgentGuard-Gym
-
-emoji: 🛡️
+title: AgentGuard-Gym
+emoji: "🛡️"
 colorFrom: blue
 colorTo: red
 sdk: docker
@@ -10,10 +8,10 @@ pinned: false
 license: bsd-3-clause
 app_port: 7860
 tags:
-
-- openenv
-- security
-- adversarial-rl
+  - openenv
+  - security
+  - adversarial-rl
+---
 
 # AgentGuard-Gym
 
@@ -26,8 +24,6 @@ tags:
 - **Mini-blog (HF) or <2 min YouTube demo**: **TODO** (add link)
 
 > **Scope:** This repository is **AgentGuard-Gym only** (cyber/AI security). Training and math are documented for reproducibility; see `CALCULATIONS_REFERENCE.md` for **AgentGuard** reward derivations (ignore legacy AML-DefenseGym sections in that file if you maintain a single-gym tree).
-
----
 
 ## Table of contents
 
