@@ -29,9 +29,9 @@ def test_benign_reward_signs(system: AdversarialSystem, monkeypatch: pytest.Monk
     results = [system.run_episode(task=CyberAdversarialTaskType.PROMPT_INJECTION, step_idx=i) for i in range(30)]
     for r in results:
         if r.outcome == "TN":
-            assert r.reward_defender > 0.0, f"TN has non-positive R_D={r.reward_defender:.4f}"
+            assert r.reward_defender > 0.5, f"TN has unexpectedly low normalized R_D={r.reward_defender:.4f}"
         elif r.outcome == "FP":
-            assert r.reward_defender < 0.6, f"FP unexpectedly high R_D={r.reward_defender:.4f}"
+            assert r.reward_defender < 0.5, f"FP has unexpectedly high normalized R_D={r.reward_defender:.4f}"
 
 
 def test_elo_sign_on_benign(system: AdversarialSystem, monkeypatch: pytest.MonkeyPatch) -> None:

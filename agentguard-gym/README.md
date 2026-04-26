@@ -152,7 +152,7 @@ flowchart LR
 | `**scripts/offline_baseline.py`**          | No-API rough scores → `baseline_scores.json`.                                                                                                       |
 | `**scripts/eval_before_after.py`**         | **generalization_score** on **data/holdout_attacks.json**; optional mtime lock.                                                                     |
 | `**scripts/plot_training_metrics.py`**     | `runs/training_metrics.jsonl` → `results/training_curve.png` (needs `matplotlib`).                                                                  |
-| `**scripts/generate_demo_cache.py`**       | G14: placeholder for demo cache (`results/demo_cache_hint.txt`).                                                                                    |
+| `**scripts/generate_demo_cache.py`**       | G14: generates a real demo cache `results/demo_cache.json` (serve with `DEMO_MODE=1`).                                                              |
 | `**tests/test_rewards_bounded.py`**        | Invariant: rewards in range + smoke.                                                                                                                |
 | `**tests/test_calculations_reference.py`** | Unit checks vs documented formulas.                                                                                                                 |
 | `**tests/test_benign_sampling.py`**        | Verifies `BENIGN_EPISODE_PROB` fires at 20–40% over 500 trials.                                                                                     |
@@ -184,8 +184,8 @@ The blueprint file in-repo maps features to code paths. In short:
 - **G6 (SFT warmstart):** `data/sft_warmstart.json` — **15 gold examples (5/task), committed**.  
 - **G8 (entropy / KL):** `EntropyGuardCallback` → `training/callbacks.py`.  
 - **G9, G12:** offline corpus, novelty (embedding or BoW) → `generate_offline_corpus.py`, `novelty.py`.  
-- **G13 (experience replay):** `ExperienceBuffer` in `adversarial_loop.py` (ring buffer placeholder for future GRPO dataloader).  
-- **G14 (demo cache):** `scripts/generate_demo_cache.py` — stub for H-3 pre-cached demo.  
+- **G13 (experience replay):** `ExperienceBuffer` exists in `adversarial_loop.py` but is **not wired into GRPO training** (`train_adversarial.py`) yet.  
+- **G14 (demo cache):** `scripts/generate_demo_cache.py` generates `results/demo_cache.json`; `DEMO_MODE=1` serves cache-first.  
 - **G15:** T4-friendly small batches / 4-bit / short completions in `train_adversarial.py` (tune for your GPU).  
 - **UI / ops:** `realtime.py`, `/ui`, `/events`, trainer **start/stop** APIs.
 

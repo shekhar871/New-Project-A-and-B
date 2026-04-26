@@ -220,6 +220,8 @@ class AdversarialEpisodeResult(BaseModel):
     defender_won: bool
     # False when the episode samples from benign_corpus (legitimate traffic).
     is_malicious_scenario: bool = True
+    # True when served from demo cache (DEMO_MODE=1 cache-first path).
+    demo_cached: bool = False
     reward_defender: float = Field(ge=0.0, le=1.0)
     reward_attacker: float
     novelty_score: float = Field(ge=0.0, le=1.0)

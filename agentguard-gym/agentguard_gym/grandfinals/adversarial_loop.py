@@ -194,6 +194,8 @@ class AdversarialSystem:
                 if p is not None:
                     raw = json.loads(p.read_text(encoding="utf-8"))
                     demo_cache = raw.get("episodes") if isinstance(raw, dict) else None
+        except json.JSONDecodeError:
+            demo_cache = None
         except Exception:
             demo_cache = None
         return cls(
@@ -222,7 +224,8 @@ class AdversarialSystem:
                 ep = self.demo_cache[self._demo_idx % len(self.demo_cache)]
                 self._demo_idx += 1
                 # Rehydrate minimal fields into our result type
-                return AdversarialEpisodeResult.model_validate(ep)  # type: ignore[attr-defined]
+                r = AdversarialEpisodeResult.model_validate(ep)  # type: ignore[attr-defined]
+                return r.model_copy(update={"demo_cached": True})
             except Exception:
                 pass
         ep_id = episode_id or str(uuid.uuid4())
@@ -298,6 +301,7 @@ class AdversarialSystem:
             outcome=outcome,  # type: ignore[arg-type]
             defender_won=bool(defender_won),
             is_malicious_scenario=True,
+            demo_cached=False,
             reward_defender=float(r_d),
             reward_attacker=float(r_a),
             novelty_score=float(novelty),
@@ -365,6 +369,7 @@ class AdversarialSystem:
             outcome=outcome,  # type: ignore[arg-type]
             defender_won=bool(defender_won),
             is_malicious_scenario=False,
+            demo_cached=False,
             reward_defender=float(r_d),
             reward_attacker=float(r_a),
             novelty_score=0.0,
