@@ -1,75 +1,52 @@
-# AgentGuard-Gym — 
+# AgentGuard-Gym — mini-blog (Hugging Face)
+
+This file is the **short write-up** for judges: what the environment does, what we trained, and where to run things. **Do not host large videos in the Hub repo** — use public YouTube links from `README.md` only.
 
 ## What we built
 
-**AgentGuard-Gym** is an OpenEnv-style cybersecurity environment + Grand Finals adversarial RL stack for **agentic AI defense**. It targets three SOC-style threat themes aligned with **OWASP Agentic AI (2026)** framing:
+**AgentGuard-Gym** is an [OpenEnv](https://github.com/openenv/)-style cybersecurity **gym** plus a **Grand Finals** adversarial stack for **agentic AI defense**. It targets three SOC-style themes aligned with **OWASP Agentic AI (2026)** framing:
 
 - **Prompt injection** (easy)
 - **Tool-chain misuse / SSRF** (medium)
 - **Memory poisoning / privilege escalation** (hard)
 
-The same codebase provides:
+The repo delivers:
 
-- A **deterministic grader-based gym** (fast to validate, reproducible scoring).
-- A **Grand Finals adversarial system**: attacker → defender → judge, curriculum, ELO, novelty, and an RL training entrypoint (GRPO).
-- A **real-time dashboard** on the Space (`/ui`) driven by **Server-Sent Events** (`/events`), showing episodes and simulated training telemetry.
+1. A **deterministic, grader-based** `reset` / `step` environment with rewards in **[0, 1]**.
+2. An **adversarial loop**: attacker → defender → judge, with **~30% benign** traffic (TN/FP) from `data/benign_corpus.json` so the policy cannot collapse to “always block”.
+3. **GRPO training** via **Hugging Face TRL** (`train_adversarial.py`), optional **Unsloth**, with **experience replay** mixing (`training/replay.py`, `REPLAY_RATIO`).
+4. A **FastAPI** server and **live dashboard** (`/ui`, SSE `/events`) for episodes and trainer metrics.
 
-## Why it’s credible (not a toy)
+## What we trained
 
-### 1) Realistic success metric: confusion-matrix utility
+We run **GRPO** on an **offline defender prompt corpus** (`data/offline_corpus.jsonl` from `scripts/generate_offline_corpus.py`) with a **strict SHA-256 ground-truth registry** in `agentguard_gym/training/reward_fns.py` (rewards do not depend on fragile `[GT:…]` substrings in prompts).
 
-The environment maps defender actions to **TP/TN/FP/FN** outcomes and shapes rewards using bounded utility plus a small bounded **latency bonus** (MTTD/MTTR-style step proxies). Rewards are normalized to **[0, 1]** so dashboards and RL do not silently diverge across tasks.
+**Training evidence** from a real run (required for competition):
 
-### 2) “Benign traffic” is first-class
+- Per-step log: `runs/training_metrics.jsonl` (e.g. `loss`, `entropy`, `win_rate`, `fp_rate`)
+- Plots: `uv run python scripts/plot_training_metrics.py` → **`results/training_curve.png`**
 
-A defender that always blocks is useless in practice. Grand Finals adversarial episodes therefore include **~30% benign scenarios** sampled from `data/benign_corpus.json`, so the system explicitly measures **false positives** and trains against collapse-to-block.
+**Public re-run without W&B login** (e.g. Colab): set `WANDB_MODE=disabled` and `WANDB_DISABLED=true`; JSONL + plots still work.
 
-### 3) Hybrid judging (continuous)
+## Judge links (one place)
 
-The judge path supports a rules-based scorer that yields a **continuous 0–1 quality signal** (not just discrete buckets). This provides a smooth attacker “sophistication” scalar even when LLM judging is disabled.
+| Item | URL |
+|------|-----|
+| **Run the environment (Space)** | [Hugging Face Space](https://huggingface.co/spaces/shekhar1090/agentguard-gym-final) |
+| **Training notebook (Colab)** | [Open in Colab](https://colab.research.google.com/github/shekhar871/New-Project-A-and-B/blob/hf-split/notebooks/AgentGuard_GRPO_training.ipynb) |
+| **T4 runbook** | [COLAB_T4_GUIDE.md in Space](https://huggingface.co/spaces/shekhar1090/agentguard-gym-final/blob/main/COLAB_T4_GUIDE.md) |
+| **This blog (MD)** | [HF_BLOG.md in Space](https://huggingface.co/spaces/shekhar1090/agentguard-gym-final/blob/main/HF_BLOG.md) |
+| **Main README (all references)** | [README in Space](https://huggingface.co/spaces/shekhar1090/agentguard-gym-final/blob/main/README.md) |
+| **YouTube (optional)** | See *Submission links* in `README.md` when published |
 
-### 4) Novelty scoring for attacker pressure
+## How to verify quickly
 
-Attack novelty is computed via **SentenceTransformers cosine similarity** when available (with caching) and a portable fallback when not. This discourages repeated attacks and gives the attacker a meaningful diversity incentive.
+- `GET /health` — liveness
+- `GET /ui` — dashboard
+- `POST /episode/run` — one full episode with trace
+- `POST /adversarial/episode` — one adversarial episode
+- `GET /events` — SSE stream
 
-## How it works (high level)
+## License
 
-### Core gym (OpenEnv API)
-
-- `POST /reset` → begin an episode
-- `POST /step` → submit a structured action (e.g. `allow`, `block`, `audit_tool_chain`, `quarantine_memory`, …)
-- returns a structured observation and a reward in **[0,1]**
-
-### Grand Finals adversarial loop
-
-For each episode:
-
-1. Sample **benign** (TN/FP) with probability ~0.30, else create a **malicious** scenario (TP/FN).
-2. Build a defender observation (narrative + artifacts + tool trace).
-3. The defender responds (heuristic baseline in the Space UI; RL/LLM options exist for training/offline runs).
-4. Judge scores the interaction and the system updates:
-  - **ELO**
-  - **curriculum difficulty**
-  - **novelty statistics**
-
-## Training story (what to run)
-
-The Space is for **environment + UI**. Training is run separately (Colab T4 / HF Jobs):
-
-- See the Colab/T4 runbook in `COLAB_T4_GUIDE.md`.
-- The training entrypoint is `train_adversarial.py` (GRPO-style, Unsloth optional, fallback to transformers+PEFT+4bit).
-
-## How to verify (what judges can check quickly)
-
-- Space health: `GET /health`
-- UI: `GET /ui`
-- One episode trace: `POST /episode/run`
-- One adversarial episode: `POST /adversarial/episode`
-- Real-time events (SSE): `GET /events`
-
-## Links
-
-- **Space**: [https://huggingface.co/spaces/shekhar1090/agentguard-gym-final](https://huggingface.co/spaces/shekhar1090/agentguard-gym-final)
-- **Colab/T4 runbook**: `COLAB_T4_GUIDE.md`
-- **YouTube demo (optional)**: add your link in `README.md` under “Submission links”.
-
+`BSD-3-Clause` (see `pyproject.toml`).

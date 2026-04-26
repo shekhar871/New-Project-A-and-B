@@ -40,18 +40,32 @@ def main() -> None:
     win = [r.get("win_rate") for r in rows]
     fpr = [r.get("fp_rate") for r in rows]
     ent = [r.get("entropy") for r in rows]
+    loss = [r.get("loss") for r in rows]
+    has_loss = any(x is not None and x == x for x in loss)  # exclude NaN
 
     OUT_DIR.mkdir(exist_ok=True)
     out = OUT_DIR / "training_curve.png"
 
-    fig, ax1 = plt.subplots(figsize=(9, 4))
+    nrows = 2 if has_loss else 1
+    fig, axes = plt.subplots(nrows, 1, figsize=(9, 4 if nrows == 1 else 6), sharex=True)
+    if nrows == 1:
+        ax1 = axes
+    else:
+        ax_loss, ax1 = axes
+        loss_y = [float(x) if x is not None and isinstance(x, (int, float)) and x == x else float("nan") for x in loss]
+        ax_loss.plot(steps, loss_y, color="#2C2C2C", linewidth=1.5, label="loss")
+        ax_loss.set_ylabel("loss")
+        ax_loss.set_title("GRPO / policy loss (from trainer logs)")
+        ax_loss.grid(True, alpha=0.3)
+        ax_loss.legend(loc="best")
     ax2 = None
     if any(x is not None for x in win):
         ax1.plot(steps, win, label="win_rate", color="#1D9E75", linewidth=1.5)
     if any(x is not None for x in fpr):
         ax1.plot(steps, fpr, label="fp_rate", color="#C73E1D", linewidth=1.0, alpha=0.8)
-    ax1.set_xlabel("GRPO step")
     ax1.set_ylabel("rate")
+    ax1.set_title("Outcome rates (from reward_fn tallies)" if has_loss else "")
+    ax1.set_xlabel("GRPO step")
     ax1.grid(True, alpha=0.3)
 
     if any(x is not None for x in ent):

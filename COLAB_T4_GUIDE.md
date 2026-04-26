@@ -1,73 +1,66 @@
-# Colab (T4) guide — AgentGuard Grand Finals
+# Colab (T4) guide — AgentGuard-Gym GRPO
 
-This is the quickest way to get **real training curves** on a free/cheap **T4** and then re-run the same on Hugging Face Jobs for final submission.
+Use this with the **public training notebook** (judge re-run):
 
-## Why Colab first, HF Jobs for final
+- **Open in Google Colab:**  
+  `https://colab.research.google.com/github/shekhar871/New-Project-A-and-B/blob/hf-split/notebooks/AgentGuard_GRPO_training.ipynb`  
+  (If your default branch is `main` and the notebook lives there, replace `hf-split` with `main` in the URL.)
 
-- **Colab**: fast iteration (fix config, confirm it trains, get first plots).
-- **Hugging Face Jobs (T4)**: reproducible “final run” with clean logs + stable artifact links (what judges expect).
+- **Same notebook in the Hugging Face Space repo (files):**  
+  `https://huggingface.co/spaces/shekhar1090/agentguard-gym-final/blob/main/notebooks/AgentGuard_GRPO_training.ipynb`  
+  (After you push the Space; path is `notebooks/AgentGuard_GRPO_training.ipynb`.)
 
-## T4-safe training recipe (data-backed)
+## Why Colab first, HF Jobs later
 
-These settings are aligned with the Opening Ceremony guidance (T4 is a “good choice”) and with the GRPO practicality constraints in your blueprint:
-- **G=4** generations (`num_generations=4`) to avoid OOM
-- **batch=1** with **grad accumulation** (default `8`) for stability
-- shorter completions (`max_completion_length=200`) to increase steps/hour
+- **Colab:** Fast iteration, free/cheap **T4**, first **loss + reward** plots for evidence.
+- **HF Jobs:** Stable GPU log + artifact links for a “final” run.
 
-## Colab steps (recommended)
+## T4-safe defaults (see `train_adversarial.py`)
 
-1) Start a **GPU** runtime (T4).
+- `NUM_GENERATIONS=4`, `per_device_train_batch_size=1`, `gradient_accumulation_steps=4`
+- `MAX_COMPLETION_LENGTH=128` (override via env if needed)
+- Smaller model if 7B OOM: `export MODEL_HF=Qwen/Qwen2.5-0.5B-Instruct`
 
-2) Clone repo and install:
+## Public re-run without W&B login
+
+The training script respects:
 
 ```bash
-git clone https://github.com/shekhar871/Agent_final.git
-cd Agent_final/agentguard-gym
-pip install -U uv
-uv sync --extra dev --extra grandfinals
+export WANDB_MODE=disabled
+export WANDB_DISABLED=true
 ```
 
-3) Generate offline corpus (600 scenarios):
+Metrics still append to **`runs/training_metrics.jsonl`** via `JsonlTrainingMetricsCallback`.
+
+## Manual steps (same as the notebook)
+
+From the **repository root** (not a subfolder):
+
+```bash
+git clone -b hf-split https://github.com/shekhar871/New-Project-A-and-B.git
+cd New-Project-A-and-B
+uv sync --extra dev --extra grandfinals
+# or: pip install -e ".[dev,grandfinals]"
+```
 
 ```bash
 uv run python scripts/generate_offline_corpus.py
-```
-
-4) Run training (defaults are T4-safe):
-
-```bash
 uv run python train_adversarial.py
-```
-
-Optional knobs (environment variables):
-
-```bash
-export AG_MODEL_NAME="Qwen/Qwen2.5-0.5B-Instruct"
-export AG_EPOCHS=1
-export AG_GRAD_ACCUM=8
-export AG_MAX_COMPLETION=200
-export AG_LR=5e-6
-```
-
-5) Generate plots (these are the “training evidence” judges want):
-
-```bash
 uv run python scripts/plot_training_metrics.py
 ```
 
-Outputs:
-- `plots/reward_curve.png`
-- `plots/entropy_curve.png`
+**Evidence files (judges):**
 
-## Pre-submission confirmation
+- `runs/training_metrics.jsonl` — one JSON line per step (`loss`, `entropy`, `win_rate`, `fp_rate`)
+- `results/training_curve.png` — **loss** (if logged) + outcome rates + entropy
 
-From `agentguard-gym/`:
+## Verify (local or Colab)
 
 ```bash
 uv run pytest
 uv run openenv validate --verbose .
 uv run server
+# open http://127.0.0.1:7860/ui
 ```
 
-Then open the dashboard at `http://127.0.0.1:8000/ui`.
-
+Dashboard port is **7860** (OpenEnv / Hugging Face Spaces default in this project), not 8000.

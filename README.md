@@ -1,28 +1,26 @@
----
 
-## title: AgentGuard-Gym
-emoji: "🛡️"
-colorFrom: blue
-colorTo: red
-sdk: docker
-pinned: false
-license: bsd-3-clause
-app_port: 7860
-tags:
-  - openenv
-  - security
-  - adversarial-rl
+
+---
 
 # AgentGuard-Gym
 
 **AgentGuard-Gym** is an [OpenEnv](https://github.com/openenv/)-style cybersecurity gym for **agentic AI defense**: triage of prompt streams, tool/URL traces, and memory artifacts aligned with **OWASP Agentic AI (2026)**-style risk classes. The same codebase provides (1) a **deterministic, grader-based environment** for hackathon baselines, (2) a **Grand Finals adversarial stack** (attacker → defender → judge, curriculum, ELO, novelty, GRPO), including **~30% benign (TN/FP) episodes** from `data/benign_corpus.json` so the defender does not collapse to “always block”, and (3) a **FastAPI server** with a **real-time HTML dashboard** (Server-Sent Events) for episodes and training telemetry.
 
-## Submission links (required by judges)
+## Submission links (non-negotiable — use these in the hackathon form)
 
-- **Hugging Face Space (environment URL)**: `https://huggingface.co/spaces/shekhar1090/agentguard-gym-final`
-- **Colab notebook (training re-run)**: `COLAB_T4_GUIDE.md` (runbook) — `https://huggingface.co/spaces/shekhar1090/agentguard-gym-final/blob/main/COLAB_T4_GUIDE.md`
-- **HF blog writeup (MD file in this Space)**: `HF_BLOG.md` — `https://huggingface.co/spaces/shekhar1090/agentguard-gym-final/blob/main/HF_BLOG.md`
-- **YouTube demo (optional, <2 min)**: **TODO** (add link if you record)
+
+| Deliverable                                                     | URL / path                                                                                                                                                                                                        |
+| --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Hugging Face Space (live environment; judge evaluation URL)** | [https://huggingface.co/spaces/shekhar1090/agentguard-gym-final](https://huggingface.co/spaces/shekhar1090/agentguard-gym-final)                                                                                  |
+| **Training re-run (Colab, public)**                             | [Open in Colab](https://colab.research.google.com/github/shekhar871/New-Project-A-and-B/blob/hf-split/notebooks/AgentGuard_GRPO_training.ipynb) — `notebooks/AgentGuard_GRPO_training.ipynb` on branch `hf-split` |
+| **Training run (HF Space / Hub file mirror)**                   | After push: [notebooks/AgentGuard_GRPO_training.ipynb in Space](https://huggingface.co/spaces/shekhar1090/agentguard-gym-final/blob/main/notebooks/AgentGuard_GRPO_training.ipynb) (same source as repo)          |
+| **T4 / setup runbook (markdown)**                               | `COLAB_T4_GUIDE.md` — [in Space / repo](https://huggingface.co/spaces/shekhar1090/agentguard-gym-final/blob/main/COLAB_T4_GUIDE.md)                                                                               |
+| **Mini–blog (Hugging Face, MD in repo/Space)**                  | [HF_BLOG.md](https://huggingface.co/spaces/shekhar1090/agentguard-gym-final/blob/main/HF_BLOG.md)                                                                                                                 |
+| **YouTube (optional, under 2 min)**                             | Add your public URL here when ready — not hosted on Hub (link only)                                                                                                                                               |
+| **Training evidence (loss + rates; real run)**                  | `runs/training_metrics.jsonl` (logged each step) → `uv run python scripts/plot_training_metrics.py` → `**results/training_curve.png`**. Commit the PNG + a short W&B or JSONL description if you use W&B.         |
+
+
+> **OpenEnv:** `openenv-core` is in `pyproject.toml`; the HTTP surface matches the OpenEnv layout (`openenv.yaml`, `server/app.py`).
 
 > **Scope:** This repository is **AgentGuard-Gym only** (cyber/AI security). Training and math are documented for reproducibility; see `CALCULATIONS_REFERENCE.md` for **AgentGuard** reward derivations (ignore legacy AML-DefenseGym sections in that file if you maintain a single-gym tree).
 
@@ -100,7 +98,7 @@ flowchart LR
 
 
 - **Standard mode:** clients call `POST /reset` and `POST /step` only; the environment steps deterministically and returns `AgentGuardReward` in `[0,1]`.  
-- **Adversarial mode:** `AdversarialSystem` runs **malicious** (TP/FN) or **benign** (TN/FP) episodes, composes attacker → defender → judge on malicious paths, updates **ELO** and **curriculum**, and exposes JSON via `/adversarial/*`. The dashboard can consume both **toy trainer** and **adversarial** events.
+- **Adversarial mode:** `AdversarialSystem` runs **malicious** (TP/FN) or **benign** (TN/FP) episodes, composes attacker → defender → judge on malicious paths, updates **ELO** and **curriculum**, and exposes JSON via `/adversarial/`*. The dashboard can consume both **toy trainer** and **adversarial** events.
 
 ---
 
@@ -112,7 +110,7 @@ flowchart LR
 | Module               | Role                                                                                                                                                                                                 |
 | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `**environment.py`** | `AgentGuardEnvironment`: episode lifecycle, task selection, `step` → grader, reward assembly, `state` snapshot. Enforces Pydantic action validation.                                                 |
-| `**models.py`**      | Pydantic types: `AgentGuard*`, `StepResult`, cyber tasks, and **Grand Finals** types (`AttackerAction`, `JudgeVerdict`, `ELOTracker`, `AdversarialEpisodeResult`, `CyberAdversarialTaskType`, etc.). |
+| `**models.py`**      | Pydantic types: `AgentGuard`*, `StepResult`, cyber tasks, and **Grand Finals** types (`AttackerAction`, `JudgeVerdict`, `ELOTracker`, `AdversarialEpisodeResult`, `CyberAdversarialTaskType`, etc.). |
 | `**graders.py`**     | Task-specific label checks, confusion outcome (TP/TN/FP/FN), partial-credit paths (e.g. `AUDIT_TOOL_CHAIN`, coarse `BLOCK`), hooks into time potential.                                              |
 | `**reward_math.py`** | `minmax_normalize`, `mttd_mttr_step_potential`, and shared numeric helpers; keeps **rewards in [0,1]** after mapping.                                                                                |
 | `**client.py`**      | Thin HTTP client for the env API (local or remote).                                                                                                                                                  |
@@ -167,7 +165,7 @@ flowchart LR
 | File                                    | Role                                                                                                                                                                |
 | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `**openenv.yaml`**                      | Name, version, **tags**, server hints, **observation/action/reward** schema sketch, `modes` (standard / adversarial), **RFC** and **OWASP** metadata for reviewers. |
-| `**pyproject.toml`**                    | Dependencies, `server` script, optional `grandfinals` extras, package discovery (includes `server*`).                                                               |
+| `**pyproject.toml`**                    | Dependencies, `server` script, optional `grandfinals` extras, package discovery (includes `server`*).                                                               |
 | `**Dockerfile`**                        | `ENV PORT=7860`, `EXPOSE 7860`, health check + `uvicorn` on `${PORT:-7860}`; copies `data/` for seeds, benign corpus, and holdout.                                  |
 | `**PRE_SUBMISSION_CHECKLIST.md`**       | Ordered verification before hackathon submit.                                                                                                                       |
 | `**CALCULATIONS_REFERENCE.md`**         | Equations and file pointers; use **AgentGuard** sections for this repo.                                                                                             |
@@ -187,7 +185,7 @@ The blueprint file in-repo maps features to code paths. In short:
 - **G6 (SFT warmstart):** `data/sft_warmstart.json` — **15 gold examples (5/task), committed**.  
 - **G8 (entropy / KL):** `EntropyGuardCallback` → `training/callbacks.py`.  
 - **G9, G12:** offline corpus, novelty (embedding or BoW) → `generate_offline_corpus.py`, `novelty.py`.  
-- **G13 (experience replay):** `ExperienceBuffer` exists in `adversarial_loop.py` but is **not wired into GRPO training** (`train_adversarial.py`) yet.  
+- **G13 (experience replay):** `ReplayMixedPrompts` (`training/replay.py`) mixed into **GRPO** in `train_adversarial.py` (`REPLAY_RATIO` default **0.30**).  
 - **G14 (demo cache):** `scripts/generate_demo_cache.py` generates `results/demo_cache.json`; `DEMO_MODE=1` serves cache-first.  
 - **G15:** T4-friendly small batches / 4-bit / short completions in `train_adversarial.py` (tune for your GPU).  
 - **UI / ops:** `realtime.py`, `/ui`, `/events`, trainer **start/stop** APIs.
@@ -266,7 +264,7 @@ uv run server
 5. **Artifacts:** LoRA under `./checkpoints/defender/adapter_final`.
 6. **Entropy / KL:** `GRPOConfig.beta` and `EntropyGuardCallback`.
 
-**Colab / notebook:** use the same steps; mount repo, `uv` or `pip install -e ".[grandfinals]"`, then training script. Prefer a **T4** runtime; reduce `max_seq_length` / `num_generations` if OOM.
+**Colab / notebook (judges):** open `[notebooks/AgentGuard_GRPO_training.ipynb](notebooks/AgentGuard_GRPO_training.ipynb)` in **Google Colab** from the *Submission links* table above, or run the same shell steps manually (`COLAB_T4_GUIDE.md`). Use a **T4** runtime; set `MODEL_HF` to a **smaller** Qwen if 7B OOMs; set `WANDB_MODE=disabled` for a public re-run without W&B login.
 
 **Hugging Face:** publish datasets/models/adapters to your org; use **Space** for the **environment UI**, and **Jobs** for GPU training, mirroring the commands above.
 

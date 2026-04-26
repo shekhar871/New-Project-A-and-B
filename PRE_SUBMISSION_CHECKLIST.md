@@ -2,6 +2,16 @@
 
 This is the “no surprises” sequence to confirm everything works end-to-end before you submit.
 
+## 0) Hackathon form (copy from README)
+
+- [ ] **HF Space URL** (environment): [https://huggingface.co/spaces/shekhar1090/agentguard-gym-final](https://huggingface.co/spaces/shekhar1090/agentguard-gym-final)
+- [ ] **Training run notebook (public)**: [Colab](https://colab.research.google.com/github/shekhar871/New-Project-A-and-B/blob/hf-split/notebooks/AgentGuard_GRPO_training.ipynb) — test in an **incognito** window
+- [ ] **Evidence**: `results/training_curve.png` + `runs/training_metrics.jsonl` from a **real** run
+- [ ] **Mini-blog**: [HF_BLOG.md](https://huggingface.co/spaces/shekhar1090/agentguard-gym-final/blob/main/HF_BLOG.md) (in Space after push)
+- [ ] **YouTube** (optional, under 2 min): public URL in README only (no big files in Hub)
+- [ ] **README** lists every judge-facing link (this repo + Space `README.md`)
+- [ ] **One submission** per team; **no** large video files in the Space repo
+
 ## 1) Environment setup
 
 From `agentguard-gym/`:

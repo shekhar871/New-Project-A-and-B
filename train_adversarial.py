@@ -4,6 +4,7 @@
 import json
 import os
 from pathlib import Path
+from typing import List, Union
 
 import torch
 from datasets import Dataset
@@ -198,7 +199,18 @@ def main() -> None:
     assert (not isinstance(_probe_reward, float)) or (_probe_reward == _probe_reward), "Sentinel reward is NaN."
     assert float(_probe_reward) != 0.0, "Sentinel reward returned 0.0 — registry lookup/reward parsing likely failed."
 
-    wandb.init(project=WANDB_PROJECT, name="defender-grpo-v2")
+    _wan_off = (os.environ.get("WANDB_MODE", "") or "").lower() == "disabled" or (
+        os.environ.get("WANDB_DISABLED", "") or ""
+    ).lower() in ("1", "true", "yes")
+    _wan_mode: str = "disabled" if _wan_off else "online"
+    try:
+        wandb.init(project=WANDB_PROJECT, name="defender-grpo-v2", mode=_wan_mode)  # type: ignore[arg-type]
+    except Exception:
+        # Colab / offline re-runs: never block training on W&B
+        try:
+            wandb.init(project=WANDB_PROJECT, name="defender-grpo-v2", mode="disabled")
+        except Exception:
+            pass
     try:
         wandb.log(
             {
@@ -256,6 +268,7 @@ def main() -> None:
     num_generations = int(os.getenv("NUM_GENERATIONS", "4"))
     max_completion_length = int(os.getenv("MAX_COMPLETION_LENGTH", "128"))
 
+    _report: Union[str, List[str]] = "wandb" if not _wan_off else []  # [] disables loggers (Colab, no W&B login)
     config = GRPOConfig(
         output_dir=OUTPUT_DIR,
         max_steps=max_steps,
@@ -268,7 +281,7 @@ def main() -> None:
         max_completion_length=max_completion_length,
         logging_steps=1,
         save_steps=25,
-        report_to="wandb",
+        report_to=_report,
         fp16=bool(torch.cuda.is_available()),
         bf16=False,
         remove_unused_columns=False,
@@ -297,7 +310,11 @@ def main() -> None:
     tokenizer.save_pretrained(f"{OUTPUT_DIR}/adapter_final")
     print(f"Saved adapter to {OUTPUT_DIR}/adapter_final")
 
-    wandb.finish()
+    try:
+        if wandb.run is not None:
+            wandb.finish()
+    except Exception:
+        pass
 
 
 if __name__ == "__main__":
