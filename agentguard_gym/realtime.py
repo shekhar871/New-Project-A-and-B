@@ -158,15 +158,16 @@ class RealTimeTrainer:
     def start(self, cfg: TrainerConfig) -> TrainerStatus:
         with self._lock:
             if self._status.running:
-                return self.status()
+                return TrainerStatus(**self._status.__dict__)
             self._stop.clear()
             self._status.running = True
             self._status.policy = cfg.policy
             self._status.started_at_ms = _now_ms()
             self._thread = threading.Thread(target=self._run, args=(cfg,), daemon=True)
             self._thread.start()
-            self._bus.emit("trainer.started", {"policy": cfg.policy, "policy_type": cfg.policy})
-            return self.status()
+            snapshot = TrainerStatus(**self._status.__dict__)
+        self._bus.emit("trainer.started", {"policy": cfg.policy, "policy_type": cfg.policy})
+        return snapshot
 
     def stop(self) -> TrainerStatus:
         self._stop.set()
