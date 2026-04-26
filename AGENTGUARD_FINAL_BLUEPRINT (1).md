@@ -1,5 +1,7 @@
 # AgentGuard-Gym Grand Finals: FINAL BLUEPRINT v4.0
+
 ## Research-Backed · Mathematically-Grounded · Production-Ready
+
 ### Built on: GRPO (Shao et al., 2024) · DAPO (Yu et al., 2025) · REPO (2025) · GTPO (2025) · CE-GPPO (2025) · SEAS (2025) · RvB (2026) · SSP (2026) · OWASP Agentic Top-10 (2026) · OpenEnv RFC 004 · Theory of Mind (ToM) 2026
 
 ---
@@ -8,17 +10,19 @@
 
 **Verdict: RELEVANT and MOSTLY CORRECT. All 9 points actioned.**
 
-| Point Made | Accuracy | Action |
-|---|---|---|
-| "Converted theory → execution-ready system" | ✅ Correct | Done in gap fills |
-| "Risk matrix is elite-level" | ✅ Correct | Kept and extended |
-| "Training viability fixes (offline corpus, G=4)" | ✅ Correct | Done in gap fills |
-| "Still trying to do too much" | ✅ **Critical warning** | Scoped to defender-only training |
-| "Silent failure mode: curves look flat" | ✅ Correct | Generalization Score added |
-| "Judge is weakly justified" | ✅ Correct | Wired judge_quality into R_A |
-| "Add Generalization Score metric" | ✅ Best suggestion | Centerpiece of demo |
-| "Phase Shift moment in demo" | ✅ Correct | Nash detector story scripted |
-| "Pre-decide fallback mode" | ✅ Critical | Full fallback script in Section 7 |
+
+| Point Made                                       | Accuracy               | Action                            |
+| ------------------------------------------------ | ---------------------- | --------------------------------- |
+| "Converted theory → execution-ready system"      | ✅ Correct              | Done in gap fills                 |
+| "Risk matrix is elite-level"                     | ✅ Correct              | Kept and extended                 |
+| "Training viability fixes (offline corpus, G=4)" | ✅ Correct              | Done in gap fills                 |
+| "Still trying to do too much"                    | ✅ **Critical warning** | Scoped to defender-only training  |
+| "Silent failure mode: curves look flat"          | ✅ Correct              | Generalization Score added        |
+| "Judge is weakly justified"                      | ✅ Correct              | Wired judge_quality into R_A      |
+| "Add Generalization Score metric"                | ✅ Best suggestion      | Centerpiece of demo               |
+| "Phase Shift moment in demo"                     | ✅ Correct              | Nash detector story scripted      |
+| "Pre-decide fallback mode"                       | ✅ Critical             | Full fallback script in Section 7 |
+
 
 ---
 
@@ -65,6 +69,7 @@ significant scientific narrative weight. Added to prompts.py below.
 ### Point 4 — OWASP ASI Codes: ✅ CONFIRMED EXACTLY CORRECT — ADD IMMEDIATELY
 
 Verified at genai.owasp.org and in the official OWASP PDF:
+
 - ASI01: Agent Goal Hijack ← your prompt_injection task
 - ASI02: Tool Misuse & Exploitation ← your tool_misuse_ssrf task
 - ASI06: Memory & Context Poisoning ← your memory_poisoning task
@@ -85,6 +90,7 @@ JUDGE:   Hybrid (rule-based fast path + LLM for edge cases only)
 ```
 
 **Why this is SCIENTIFICALLY STRONGER, not weaker:**
+
 - AlphaGo Zero trained one network against a fixed (then improving) version of itself
 - DeepSeek-R1 trained one policy, not three simultaneously
 - One clean learning curve is more convincing than three noisy curves
@@ -95,7 +101,8 @@ JUDGE:   Hybrid (rule-based fast path + LLM for edge cases only)
 
 ## SECTION 2: REPOSITORY INTEGRATION MAP (Based on GitHub Repo Analysis)
 
-Your existing repo (https://github.com/shekhar871/Antigaurd-GYM-RL-) has:
+Your existing repo ([https://github.com/shekhar871/Antigaurd-GYM-RL-](https://github.com/shekhar871/Antigaurd-GYM-RL-)) has:
+
 ```
 agentguard_gym/
   environment.py    ← EXISTS (needs inject_attack() added)
@@ -110,6 +117,7 @@ baseline_scores.json ← EXISTS (use as "before" benchmark)
 ```
 
 **New files to create:**
+
 ```
 agentguard_gym/
   attacker.py           ← NEW
@@ -149,6 +157,7 @@ GRPO Loss:
 ```
 
 **Research-backed hyperparameters (from DAPO + CE-GPPO + AEPO, 2025):**
+
 ```
 ε_c_lower = 0.2   (standard lower clip)
 ε_c_upper = 0.28  (DAPO Clip-Higher: upper clip > lower clip)
@@ -167,6 +176,7 @@ gradient contributions beyond the clipping region prevents entropy decay.
 
 Based on GTPO (2025), REPO (2025), STEER (2026), and CE-GPPO (2025), entropy collapse
 in GRPO follows this trajectory:
+
 ```
 Phase 1 (steps 0-60):   Steady entropy decay — normal, expected
 Phase 2 (steps 60-120): Acceleration — danger zone begins
@@ -176,6 +186,7 @@ Phase 3 (steps 120+):   Collapse or explosion — if untreated
 **Your 3-layer defense (each layer backed by a separate paper):**
 
 **Layer 1: Clip-Higher (DAPO, Yu et al. 2025)**
+
 ```python
 # In GRPOConfig:
 cliprange_low = 0.2
@@ -183,6 +194,7 @@ cliprange_high = 0.28  # Asymmetric — this is the key change
 ```
 
 **Layer 2: Entropy Bonus (EDGE-GRPO, 2025; AEPO, 2025)**
+
 ```
 L_total = L_GRPO - λ_ent × H(π_θ)
 where λ_ent = 0.01, H = policy entropy at token level
@@ -191,6 +203,7 @@ Implementation in TRL via custom loss function or callback.
 ```
 
 **Layer 3: KL Annealing Schedule (REPO / Entropy Scheduling paper, 2025)**
+
 ```
 β(t) = β₀ × exp(-decay × t / T_max)
 
@@ -210,6 +223,7 @@ t=200: β = 0.015  (floor, never go below)
 ```
 
 **Entropy Collapse Detection (GTPO, 2025):**
+
 ```
 Monitor every 10 steps:
   H_current = mean token entropy across batch
@@ -255,6 +269,7 @@ R_action_fee = 0.02 (always subtracted, prevents infinite loop strategies)
 ```
 
 **Normalization (verified arithmetic):**
+
 ```
 Worst case: FN on SSRF
   R_raw_worst = 0.60 × (-2.50 + -4.00) + 0.25 × 0 + 0.10 × 0 - 0.05 × 0.02
@@ -1505,38 +1520,40 @@ This is NOT giving up. This is professional engineering judgment.
 
 ## SECTION 8: 38-HOUR FINAL EXECUTION SCHEDULE
 
-| Time | Action | Owner | Output |
-|------|--------|-------|--------|
-| H0:00 | Start `generate_offline_corpus.py` in background | All | Background process |
-| H0:15 | Team role assignment, Git branch `v2-adversarial` | All | Branch |
-| H0:30 | Add models.py additions (G5) | Dev A | Importable models |
-| H1:00 | Create prompts.py (G2) | Dev A | All system prompts |
-| H1:30 | Add inject_attack() to environment.py (G3) | Dev B | Fixed environment |
-| H2:00 | Build attacker.py with novelty scoring | Dev A | Working attacker |
-| H3:30 | Build judge.py (hybrid fast/LLM) | Dev B | Working judge |
-| H4:30 | Build curriculum.py + adversarial_loop.py | Dev C | Full loop |
-| H5:30 | Build training/reward_fns.py (G4 fix) | Dev C | TRL-compatible rewards |
-| H6:00 | Add FastAPI adversarial endpoints | Dev B | /adversarial/* endpoints |
-| H7:00 | Update openenv.yaml | Dev A | Valid spec |
-| H7:30 | Offline corpus finishes (~600 scenarios) | — | data/offline_corpus.jsonl |
-| H8:00 | Run observation_builder.py unit tests | All | All tests green |
-| H8:30 | Docker rebuild + HF Space push | Dev B | Live Space |
-| H9:00 | Build train_adversarial.py | Dev C | Training script |
-| H10:00 | Run SFT warmstart (5 examples, optional) | Dev C | Better starting point |
-| H11:00 | START GRPO TRAINING | Dev C | Training running |
-| H11-H19 | Monitor training every 30 min | All | Wandb screenshots |
-| H19:00 | Collect training plots, checkpoint | Dev C | Plots committed |
-| H20:00 | Run eval_before_after.py | Dev A | Before/after table |
-| H21:00 | Record demo (3 scenarios from Section 3.7) | Dev B | Screen recording |
-| H22:00 | Build run_demo.py for Phase Shift story | Dev A | Demo script |
-| H24:00 | Write HuggingFace blog post (600+ words) | Dev D | Blog draft |
-| H26:00 | Overhaul README with all links + plots | Dev D | README.md |
-| H28:00 | Build Colab notebook | Dev C | Runnable notebook |
-| H32:00 | Final test suite: pytest + openenv validate | All | All passing |
-| H34:00 | Presentation slides (5 slides) | Dev D | Slides |
-| H36:00 | Final GitHub tag v2.0-adversarial | All | Release |
-| H37:00 | Buffer: fix anything broken | All | — |
-| H38:00 | SUBMIT | — | Done |
+
+| Time    | Action                                            | Owner | Output                    |
+| ------- | ------------------------------------------------- | ----- | ------------------------- |
+| H0:00   | Start `generate_offline_corpus.py` in background  | All   | Background process        |
+| H0:15   | Team role assignment, Git branch `v2-adversarial` | All   | Branch                    |
+| H0:30   | Add models.py additions (G5)                      | Dev A | Importable models         |
+| H1:00   | Create prompts.py (G2)                            | Dev A | All system prompts        |
+| H1:30   | Add inject_attack() to environment.py (G3)        | Dev B | Fixed environment         |
+| H2:00   | Build attacker.py with novelty scoring            | Dev A | Working attacker          |
+| H3:30   | Build judge.py (hybrid fast/LLM)                  | Dev B | Working judge             |
+| H4:30   | Build curriculum.py + adversarial_loop.py         | Dev C | Full loop                 |
+| H5:30   | Build training/reward_fns.py (G4 fix)             | Dev C | TRL-compatible rewards    |
+| H6:00   | Add FastAPI adversarial endpoints                 | Dev B | /adversarial/* endpoints  |
+| H7:00   | Update openenv.yaml                               | Dev A | Valid spec                |
+| H7:30   | Offline corpus finishes (~600 scenarios)          | —     | data/offline_corpus.jsonl |
+| H8:00   | Run observation_builder.py unit tests             | All   | All tests green           |
+| H8:30   | Docker rebuild + HF Space push                    | Dev B | Live Space                |
+| H9:00   | Build train_adversarial.py                        | Dev C | Training script           |
+| H10:00  | Run SFT warmstart (5 examples, optional)          | Dev C | Better starting point     |
+| H11:00  | START GRPO TRAINING                               | Dev C | Training running          |
+| H11-H19 | Monitor training every 30 min                     | All   | Wandb screenshots         |
+| H19:00  | Collect training plots, checkpoint                | Dev C | Plots committed           |
+| H20:00  | Run eval_before_after.py                          | Dev A | Before/after table        |
+| H21:00  | Record demo (3 scenarios from Section 3.7)        | Dev B | Screen recording          |
+| H22:00  | Build run_demo.py for Phase Shift story           | Dev A | Demo script               |
+| H24:00  | Write HuggingFace blog post (600+ words)          | Dev D | Blog draft                |
+| H26:00  | Overhaul README with all links + plots            | Dev D | README.md                 |
+| H28:00  | Build Colab notebook                              | Dev C | Runnable notebook         |
+| H32:00  | Final test suite: pytest + openenv validate       | All   | All passing               |
+| H34:00  | Presentation slides (5 slides)                    | Dev D | Slides                    |
+| H36:00  | Final GitHub tag v2.0-adversarial                 | All   | Release                   |
+| H37:00  | Buffer: fix anything broken                       | All   | —                         |
+| H38:00  | SUBMIT                                            | —     | Done                      |
+
 
 ---
 
@@ -1565,6 +1582,7 @@ attacker reward — so the attacker can't reward-hack with novel-looking but tri
 
 **Slide 4 — Results (90s):**
 Lead with two numbers:
+
 ```
 Generalization Score (attacks NEVER seen during training):
   BEFORE: 38%   |   AFTER: 74%   |   Delta: +36pp
@@ -1572,6 +1590,7 @@ Generalization Score (attacks NEVER seen during training):
   (ASI02: 40% → 80%)
   (ASI06: 20% → 40%)
 ```
+
 Then: "Show Phase Transition at step 62 in the Wandb curve."
 Say: "This is why the Nash detector matters — without it, both agents plateau and stop learning.
 With it, the curriculum automatically forces new exploration."
@@ -1590,26 +1609,28 @@ has this problem. We have the training gym."
 
 ## SECTION 10: COMPLETE RESEARCH CITATIONS
 
-| # | Paper | Key Contribution to This Blueprint |
-|---|-------|-------------------------------------|
-| 1 | **GRPO** (Shao et al., 2024) | Base training algorithm |
-| 2 | **DAPO** (Yu et al., 2025) | Clip-Higher (ε_high=0.28) prevents entropy collapse |
-| 3 | **REPO** (2025, ICLR) | Adaptive KL controller preserves entropy for sequential learning |
-| 4 | **GTPO** (2025) | Entropy threshold monitoring, conflict-aware gradient correction |
-| 5 | **CE-GPPO** (2025) | High entropy early → moderate reduction later = best performance |
-| 6 | **STEER** (2026) | Token-level entropy control, prevents selective collapse |
-| 7 | **EDGE-GRPO** (2025) | Entropy-Driven Advantage — guides advantage calculation using entropy |
-| 8 | **Entropy Scheduling** (2025, OpenReview) | Stable phase → annealing phase = 4% improvement in 40 steps |
-| 9 | **SEAS** (2025) | Self-evolving adversarial safety; 50.66% improvement in ASR after 3 iterations |
-| 10 | **RvB** (Jan 2026) | Red vs Blue iterative adversarial, 90% defense rate validated |
-| 11 | **SSP** (2026) | Safety Self-Play single-LLM adversarial loop |
-| 12 | **MAE** (2025) | Multi-Agent Evolve Proposer/Solver/Judge; 4.54% avg improvement |
-| 13 | **OWASP Agentic AI Top-10** (2026) | ASI01 (prompt injection) · ASI02 (SSRF) · ASI06 (memory poisoning) |
-| 14 | **OpenEnv RFC 004** (meta-pytorch/OpenEnv, 2025) | Delayed trajectory-based rewards — your architecture is a native implementation |
-| 15 | **Theory of Mind in multi-agent AI** (2026) | Defender infers attacker intent before deciding — one prompt key, large narrative weight |
-| 16 | **Muse Spark / Contemplating Mode** (Meta MSL, April 2026) | Motivates multi-agent security gym (presentation reference only — no public API) |
-| 17 | **ELO** (Elo 1960; TrueSkill 2007) | Skill-based difficulty calibration |
-| 18 | **AlphaGo Zero** (Silver et al., 2017) | Justification for training one agent against fixed adversary |
+
+| #   | Paper                                                      | Key Contribution to This Blueprint                                                       |
+| --- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| 1   | **GRPO** (Shao et al., 2024)                               | Base training algorithm                                                                  |
+| 2   | **DAPO** (Yu et al., 2025)                                 | Clip-Higher (ε_high=0.28) prevents entropy collapse                                      |
+| 3   | **REPO** (2025, ICLR)                                      | Adaptive KL controller preserves entropy for sequential learning                         |
+| 4   | **GTPO** (2025)                                            | Entropy threshold monitoring, conflict-aware gradient correction                         |
+| 5   | **CE-GPPO** (2025)                                         | High entropy early → moderate reduction later = best performance                         |
+| 6   | **STEER** (2026)                                           | Token-level entropy control, prevents selective collapse                                 |
+| 7   | **EDGE-GRPO** (2025)                                       | Entropy-Driven Advantage — guides advantage calculation using entropy                    |
+| 8   | **Entropy Scheduling** (2025, OpenReview)                  | Stable phase → annealing phase = 4% improvement in 40 steps                              |
+| 9   | **SEAS** (2025)                                            | Self-evolving adversarial safety; 50.66% improvement in ASR after 3 iterations           |
+| 10  | **RvB** (Jan 2026)                                         | Red vs Blue iterative adversarial, 90% defense rate validated                            |
+| 11  | **SSP** (2026)                                             | Safety Self-Play single-LLM adversarial loop                                             |
+| 12  | **MAE** (2025)                                             | Multi-Agent Evolve Proposer/Solver/Judge; 4.54% avg improvement                          |
+| 13  | **OWASP Agentic AI Top-10** (2026)                         | ASI01 (prompt injection) · ASI02 (SSRF) · ASI06 (memory poisoning)                       |
+| 14  | **OpenEnv RFC 004** (meta-pytorch/OpenEnv, 2025)           | Delayed trajectory-based rewards — your architecture is a native implementation          |
+| 15  | **Theory of Mind in multi-agent AI** (2026)                | Defender infers attacker intent before deciding — one prompt key, large narrative weight |
+| 16  | **Muse Spark / Contemplating Mode** (Meta MSL, April 2026) | Motivates multi-agent security gym (presentation reference only — no public API)         |
+| 17  | **ELO** (Elo 1960; TrueSkill 2007)                         | Skill-based difficulty calibration                                                       |
+| 18  | **AlphaGo Zero** (Silver et al., 2017)                     | Justification for training one agent against fixed adversary                             |
+
 
 ---
 

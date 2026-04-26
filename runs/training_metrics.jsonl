@@ -58,3 +58,17 @@
 {"step": 57, "entropy": 0.886, "win_rate": 0.8200000000000001, "fp_rate": 0.09449999999999999}
 {"step": 58, "entropy": 0.884, "win_rate": 0.83, "fp_rate": 0.09299999999999999}
 {"step": 59, "entropy": 0.882, "win_rate": 0.84, "fp_rate": 0.0915}
+{"step": 30, "event": "phase_transition"}
+{"step": 50, "event": "phase_transition"}
+{"step": 30, "event": "phase_transition"}
+{"step": 50, "event": "phase_transition"}
+{"step": 30, "event": "phase_transition"}
+{"step": 50, "event": "phase_transition"}
+{"step": 30, "event": "phase_transition"}
+{"step": 50, "event": "phase_transition"}
+{"step": 30, "event": "phase_transition"}
+{"step": 50, "event": "phase_transition"}
+{"step": 30, "event": "phase_transition"}
+{"step": 50, "event": "phase_transition"}
+{"step": 30, "event": "phase_transition"}
+{"step": 50, "event": "phase_transition"}

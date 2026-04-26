@@ -338,14 +338,18 @@ def ui() -> str:
     .chartWrap{
       border:1px solid var(--line);
       border-radius:16px;
-      background:#FAFAFA;
-      padding:8px;
+      background:linear-gradient(180deg, #F3F3F3, #FAFAFA);
+      padding:10px 10px 6px 10px;
+      min-height:280px;
     }
     canvas#chart{
       width:100%;
+      height:min(320px, 40vh);
+      min-height:220px;
       display:block;
       border-radius:12px;
-      background:#F7F7F7;
+      background:#ECECEC;
+      box-sizing:border-box;
     }
 
     .log{
@@ -426,8 +430,8 @@ def ui() -> str:
           <div class="sep"></div>
           <h2>Learning curve (streamed)</h2>
           <p class="hint">Green = <b>win_rate</b>, red = <b>fp_rate</b>. Filled from <code>runs/training_metrics.jsonl</code> (if present) and live <code>trainer.metrics</code>.</p>
-          <div class="chartWrap" style="margin-top:10px">
-            <canvas id="chart" width="860" height="180"></canvas>
+          <div class="chartWrap" id="chartWrap" style="margin-top:10px">
+            <canvas id="chart" width="900" height="280"></canvas>
           </div>
         </section>
 
@@ -452,32 +456,113 @@ def ui() -> str:
   function redrawChart() {
     const c = $("chart");
     if (!c) return;
+    const wrap = c.parentElement;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    const Wcss = Math.max(280, (wrap ? wrap.clientWidth : c.clientWidth) - 4);
+    const Hcss = Math.max(220, Math.min(320, c.clientHeight || 240));
+    c.style.width = Wcss + "px";
+    c.style.height = Hcss + "px";
+    c.width = Math.floor(Wcss * dpr);
+    c.height = Math.floor(Hcss * dpr);
     const ctx = c.getContext("2d");
-    const W = c.width, H = c.height;
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.scale(dpr, dpr);
+    const W = Wcss, H = Hcss;
+    const padL = 40, padR = 10, padT = 8, padB = 22;
+    const pL = padL, pR = W - padR, pT = padT, pB = H - padB;
+    const plotW = pR - pL, plotH = pB - pT;
     ctx.clearRect(0,0,W,H);
-    ctx.fillStyle = "#F7F7F7";
+    ctx.fillStyle = "#E8E8E8";
     ctx.fillRect(0,0,W,H);
-    ctx.strokeStyle = "rgba(0,0,0,0.08)";
-    for (let i=0;i<5;i++){
-      const y = (H-20) - i*((H-30)/4);
-      ctx.beginPath(); ctx.moveTo(10,y); ctx.lineTo(W-10,y); ctx.stroke();
+    ctx.fillStyle = "#FDFDFD";
+    ctx.fillRect(pL, pT, plotW, plotH);
+    ctx.strokeStyle = "rgba(0,0,0,0.12)";
+    ctx.lineWidth = 1;
+    for (let i=0;i<=4;i++){
+      const t = i/4;
+      const y = pB - t * plotH;
+      ctx.beginPath();
+      ctx.moveTo(pL, y);
+      ctx.lineTo(pR, y);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = "rgba(0,0,0,0.2)";
+    ctx.lineWidth = 1.25;
+    ctx.beginPath();
+    ctx.moveTo(pL, pT);
+    ctx.lineTo(pL, pB);
+    ctx.lineTo(pR, pB);
+    ctx.stroke();
+    ctx.fillStyle = "rgba(0,0,0,0.45)";
+    ctx.font = "11px ui-sans-serif, system-ui, sans-serif";
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    for (let i=0;i<=4;i++){
+      const t = i/4;
+      const y = pB - t * plotH;
+      const lab = t === 0 || t === 1 ? String(t) : t.toFixed(2);
+      ctx.fillText(lab, pL - 6, y);
     }
     const pts = metrics.slice(-200);
-    if (pts.length < 2) return;
+    if (pts.length === 0) {
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = "rgba(0,0,0,0.4)";
+      ctx.font = "13px ui-sans-serif, system-ui, sans-serif";
+      ctx.fillText("No metrics yet — start the trainer or wait for training_metrics.jsonl", W/2, (pT + pB)/2);
+      return;
+    }
+    function yAt(v) {
+      const cl = Math.max(0, Math.min(1, Number(v)));
+      return pB - cl * plotH;
+    }
+    function xAt(i, n) {
+      if (n <= 1) return pL + plotW/2;
+      return pL + (i / (n - 1)) * plotW;
+    }
     function plot(key, color){
+      const n = pts.length;
       ctx.strokeStyle = color;
+      ctx.lineWidth = 2.5;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      if (n === 1) {
+        const v = yAt(pts[0][key] ?? 0);
+        const x = xAt(0, 1);
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(x, v, 4.5, 0, Math.PI*2);
+        ctx.fill();
+        return;
+      }
       ctx.beginPath();
-      for (let i=0;i<pts.length;i++){
-        const x = 10 + (i*(W-20)/(pts.length-1));
-        const v = Math.max(0, Math.min(1, Number(pts[i][key] ?? 0)));
-        const y = (H-20) - v*(H-30);
+      for (let i=0;i<n;i++){
+        const x = xAt(i, n);
+        const y = yAt(pts[i][key] ?? 0);
         if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
       }
       ctx.stroke();
     }
     plot("win_rate", "#0B6B4A");
     plot("fp_rate", "#C62828");
+    const s0 = pts[0].step, s1 = pts[pts.length-1].step;
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    ctx.font = "10px ui-monospace, Menlo, monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    if (s0 != null && s1 != null) {
+      const mid = s0 === s1 ? "step " + s0 : "steps " + s0 + " – " + s1;
+      ctx.fillText(mid, (pL + pR) / 2, pB + 4);
+    } else {
+      ctx.fillText(String(pts.length) + " data points (rate 0–1 on left axis)", (pL + pR) / 2, pB + 4);
+    }
   }
+  const _chartWrap = () => { requestAnimationFrame(redrawChart); };
+  window.addEventListener("resize", _chartWrap);
+  if (typeof ResizeObserver !== "undefined" && document.getElementById("chartWrap")) {
+    new ResizeObserver(_chartWrap).observe(document.getElementById("chartWrap"));
+  }
+  requestAnimationFrame(redrawChart);
   function append(line, cls="") {
     const div = document.createElement("div");
     div.textContent = line;

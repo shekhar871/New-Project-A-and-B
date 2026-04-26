@@ -1,3 +1,8 @@
+# Python — never commit bytecode (rebuilt locally; bloats diffs)
+__pycache__/
+*.py[cod]
+.$py.class
+
 .env
 data/training_started_at
 .mplconfig/

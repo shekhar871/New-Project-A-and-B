@@ -1,5 +1,6 @@
 ---
-title: AgentGuard-Gym
+
+## title: AgentGuard-Gym
 emoji: "🛡️"
 colorFrom: blue
 colorTo: red
@@ -11,7 +12,6 @@ tags:
   - openenv
   - security
   - adversarial-rl
----
 
 # AgentGuard-Gym
 
@@ -205,7 +205,7 @@ The blueprint file in-repo maps features to code paths. In short:
 - `**data/offline_corpus.jsonl`** — Generated; mixed malicious/benign for GRPO; ~30% benign.  
 - `**data/sft_warmstart.json`** — **15 gold SFT examples (5 per task)** for format warmstart.  
 - `**runs/training_metrics.jsonl`** — One JSON line per `on_log` during GRPO (from `JsonlTrainingMetricsCallback`).  
-- `**results/training_curve.png**` — From `scripts/plot_training_metrics.py` after training.  
+- `**results/training_curve.png`** — From `scripts/plot_training_metrics.py` after training.  
 - **Pydantic** is the **single contract** for actions, observations, and adversarial results — keeps HTTP and training aligned.
 
 **Reward pipeline (core env):** grader → raw utility + time + surcharges → `minmax_normalize` → `value ∈ [0,1]`.  
