@@ -70,6 +70,32 @@ def load_grpo_corpus(path: str) -> Dataset:
     return Dataset.from_list(records)
 
 
+def load_sft_warmstart(path: str) -> Dataset:
+    """
+    Minimal SFT warmstart dataset: JSON list of {task,narrative,response_json}.
+    Produces rows with `prompt` and `completion` for TRL SFTTrainer.
+    """
+    from agentguard_gym.grandfinals.observation_builder import build_defender_prompt
+
+    p = Path(path)
+    if not p.is_file():
+        return Dataset.from_list([])
+    rows = json.loads(p.read_text(encoding="utf-8"))
+    out = []
+    for r in rows:
+        task = str(r.get("task", "prompt_injection"))
+        narrative = str(r.get("narrative", "")).strip()
+        completion_obj = r.get("response_json") or {}
+        prompt = build_defender_prompt(
+            narrative=narrative,
+            task=task,
+            is_malicious=True,
+            include_ground_truth_tags=False,
+        )
+        out.append({"prompt": prompt, "completion": json.dumps(completion_obj, ensure_ascii=False)})
+    return Dataset.from_list(out)
+
+
 def _build_narrative(item: dict) -> str:
     task = item.get("task", "")
     text = item.get("attack_text", "")
@@ -148,6 +174,31 @@ def main() -> None:
         print(f"[info] SFT warmstart file present: {sft} — optional phase-1 SFT is project-specific; GRPO below is the default path.")
 
     model, tokenizer = _load_model_and_tokenizer()
+
+    # Optional SFT warmstart (G6): only runs if file has examples.
+    sft_ds = load_sft_warmstart(str(sft))
+    if len(sft_ds) > 0:
+        try:
+            from trl import SFTConfig, SFTTrainer
+
+            print(f"[info] Running SFT warmstart on {len(sft_ds)} examples…")
+            sft_trainer = SFTTrainer(
+                model=model,
+                processing_class=tokenizer,
+                train_dataset=sft_ds,
+                args=SFTConfig(
+                    output_dir=str(Path(OUTPUT_DIR) / "sft"),
+                    num_train_epochs=1,
+                    per_device_train_batch_size=1,
+                    gradient_accumulation_steps=4,
+                    learning_rate=1e-5,
+                    logging_steps=1,
+                    report_to=[],
+                ),
+            )
+            sft_trainer.train()
+        except Exception as e:
+            print(f"[warn] SFT warmstart skipped due to error: {e}")
 
     config = GRPOConfig(
         output_dir=OUTPUT_DIR,

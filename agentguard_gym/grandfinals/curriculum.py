@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from collections import deque
+import json
+from pathlib import Path
 from statistics import mean, stdev
 from typing import Deque, List, Tuple
 
@@ -52,10 +54,24 @@ class CurriculumManager:
             if sigma_d < 0.05 and sigma_a < 0.05:
                 self.difficulty = min(1.0, self.difficulty + 0.20)
                 self.phase_transitions.append(self.episodes_seen)
+                self._log_phase_transition()
                 self.reward_history.clear()
                 return True
 
         return False
+
+    def _log_phase_transition(self) -> None:
+        """
+        Optional: append an explicit marker for plots.
+        Safe no-op if filesystem is unavailable.
+        """
+        try:
+            p = Path("runs/training_metrics.jsonl")
+            p.parent.mkdir(parents=True, exist_ok=True)
+            with p.open("a", encoding="utf-8") as f:
+                f.write(json.dumps({"step": self.episodes_seen, "event": "phase_transition"}) + "\n")
+        except Exception:
+            return
 
     def status(self) -> dict:
         return {
