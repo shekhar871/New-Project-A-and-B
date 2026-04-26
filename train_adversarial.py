@@ -172,11 +172,44 @@ def main() -> None:
     (data_dir / "training_started_at").touch()
     reset_outcome_tally()
 
+    # ---------------------------------------------------------------------
+    # PRODUCTION SAFETY (GRPO):
+    # Reward metadata registry MUST be populated *before the first backward pass*.
+    # If the registry is empty, rewards collapse to a constant -> advantage==0 -> zero gradient.
+    # We load corpus + register metadata BEFORE constructing the trainer (and even before model load)
+    # so any failure is caught early with explicit assertions.
+    # ---------------------------------------------------------------------
+    dataset = load_grpo_corpus(CORPUS_PATH)
+    from agentguard_gym.training.reward_fns import PROMPT_SHA_TO_META
+
+    assert len(PROMPT_SHA_TO_META) == len(dataset), (
+        f"Registry has {len(PROMPT_SHA_TO_META)}/{len(dataset)} entries. "
+        "Likely cause: prompt hashing mismatch or corpus encoding issues."
+    )
+    # Sentinel reward probe (“smoke test before the gun fires”)
+    _probe_prompt = dataset[0]["prompt"]
+    _probe_completion = "{\"decision\":\"block\"}"
+    _probe_reward = defender_reward_fn([_probe_prompt], [_probe_completion])[0]
+    assert (not isinstance(_probe_reward, float)) or (_probe_reward == _probe_reward), "Sentinel reward is NaN."
+    assert float(_probe_reward) != 0.0, "Sentinel reward returned 0.0 — registry lookup/reward parsing likely failed."
+
     wandb.init(project=WANDB_PROJECT, name="defender-grpo-v2")
+    try:
+        wandb.log(
+            {
+                "setup/registry_size": float(len(PROMPT_SHA_TO_META)),
+                "setup/sentinel_reward": float(_probe_reward),
+            },
+            step=0,
+        )
+    except Exception:
+        pass
 
     sft = data_dir / "sft_warmstart.json"
     if sft.is_file():
-        print(f"[info] SFT warmstart file present: {sft} — optional phase-1 SFT is project-specific; GRPO below is the default path.")
+        print(
+            f"[info] SFT warmstart file present: {sft} — optional phase-1 SFT is project-specific; GRPO below is the default path."
+        )
 
     model, tokenizer = _load_model_and_tokenizer()
 
@@ -219,8 +252,6 @@ def main() -> None:
         report_to="wandb",
         remove_unused_columns=False,
     )
-
-    dataset = load_grpo_corpus(CORPUS_PATH)
 
     trainer = GRPOTrainer(
         model=model,
