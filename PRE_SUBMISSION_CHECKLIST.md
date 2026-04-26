@@ -7,8 +7,9 @@ This is the “no surprises” sequence to confirm everything works end-to-end b
 - [ ] **HF Space URL** (environment): [https://huggingface.co/spaces/shekhar1090/agentguard-gym-final](https://huggingface.co/spaces/shekhar1090/agentguard-gym-final)
 - [ ] **Training run notebook (public)**: [Colab](https://colab.research.google.com/github/shekhar871/New-Project-A-and-B/blob/hf-split/notebooks/AgentGuard_GRPO_training.ipynb) — test in an **incognito** window
 - [ ] **Evidence**: `results/training_curve.png` + `runs/training_metrics.jsonl` from a **real** run
-- [ ] **Mini-blog**: [HF_BLOG.md](https://huggingface.co/spaces/shekhar1090/agentguard-gym-final/blob/main/HF_BLOG.md) (in Space after push)
-- [ ] **YouTube** (optional, under 2 min): public URL in README only (no big files in Hub)
+- [ ] **Blog (write-up)**: [`BLOG.md`](BLOG.md) — [in Space](https://huggingface.co/spaces/shekhar1090/agentguard-gym-final/blob/main/BLOG.md) (after push)
+- [ ] **YouTube** (optional, under 2 min): if you use it, add the public **URL** in the README table (Hub hosts links only, not video files)
+- [ ] **Loss in `training_metrics.jsonl`**: for strict “loss + reward” evidence, run **one GPU** Colab/Job, confirm JSON lines include `loss`, then re-run the plot and commit the PNG
 - [ ] **README** lists every judge-facing link (this repo + Space `README.md`)
 - [ ] **One submission** per team; **no** large video files in the Space repo
 

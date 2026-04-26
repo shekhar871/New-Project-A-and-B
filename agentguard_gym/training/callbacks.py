@@ -11,6 +11,32 @@ from transformers import TrainerCallback, TrainerState, TrainerControl
 from agentguard_gym.training.reward_fns import get_outcome_metrics
 
 
+def _scalar_loss_from_logs(logs: dict[str, Any]) -> Optional[float]:
+    """
+    TRL/Transformers use different keys across versions. We only *record*; training is unchanged.
+    """
+    for key in (
+        "loss",
+        "train_loss",
+        "train/loss",
+        "ce_loss",
+        "grpo_loss",
+        "policy_loss",
+    ):
+        v = logs.get(key)
+        if v is not None and isinstance(v, (int, float)) and v == v:  # not NaN
+            return float(v)
+    # Fallback: any scalar whose name suggests a training loss
+    for k, v in sorted(logs.items(), key=lambda kv: (len(kv[0]), kv[0])):
+        if not isinstance(v, (int, float)) or v != v:
+            continue
+        kl = k.lower()
+        if "loss" not in kl or "rewards" in kl or "kl_div" in kl:
+            continue
+        return float(v)
+    return None
+
+
 class JsonlTrainingMetricsCallback(TrainerCallback):
     """
     Append one JSON line per on_log to runs/training_metrics.jsonl for offline plots
@@ -32,11 +58,16 @@ class JsonlTrainingMetricsCallback(TrainerCallback):
             return control
         p = Path(self.path)
         p.parent.mkdir(parents=True, exist_ok=True)
+        ent = logs.get("entropy")
+        if ent is None:
+            ent = logs.get("train/entropy")
         row: dict = {
             "step": int(state.global_step),
-            "entropy": logs.get("entropy") or logs.get("train/entropy"),
-            "loss": logs.get("loss") or logs.get("train/loss"),
+            "entropy": ent,
         }
+        loss_v = _scalar_loss_from_logs(logs)
+        if loss_v is not None:
+            row["loss"] = loss_v
         row.update({k: float(v) for k, v in get_outcome_metrics().items() if k in ("fp_rate", "win_rate")})
         with p.open("a", encoding="utf-8") as f:
             f.write(json.dumps(row, default=str) + "\n")

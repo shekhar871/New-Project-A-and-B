@@ -1,18 +1,3 @@
----
-title: AgentGuard-Gym
-emoji: "🛡️"
-colorFrom: blue
-colorTo: red
-sdk: docker
-pinned: false
-license: bsd-3-clause
-app_port: 7860
-tags:
-  - openenv
-  - security
-  - adversarial-rl
----
-
 # AgentGuard-Gym
 
 **AgentGuard-Gym** is an [OpenEnv](https://github.com/openenv/)-style cybersecurity gym for **agentic AI defense**: triage of prompt streams, tool/URL traces, and memory artifacts aligned with **OWASP Agentic AI (2026)**-style risk classes. The same codebase provides (1) a **deterministic, grader-based environment** for hackathon baselines, (2) a **Grand Finals adversarial stack** (attacker → defender → judge, curriculum, ELO, novelty, GRPO), including **~30% benign (TN/FP) episodes** from `data/benign_corpus.json` so the defender does not collapse to “always block”, and (3) a **FastAPI server** with a **real-time HTML dashboard** (Server-Sent Events) for episodes and training telemetry.
@@ -20,16 +5,21 @@ tags:
 ## Submission links (non-negotiable — use these in the hackathon form)
 
 
-| Deliverable                                                     | URL / path                                                                                                                                                                                                        |
-| --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Hugging Face Space (live environment; judge evaluation URL)** | [https://huggingface.co/spaces/shekhar1090/agentguard-gym-final](https://huggingface.co/spaces/shekhar1090/agentguard-gym-final)                                                                                  |
-| **Training re-run (Colab, public)**                             | [Open in Colab](https://colab.research.google.com/github/shekhar871/New-Project-A-and-B/blob/hf-split/notebooks/AgentGuard_GRPO_training.ipynb) — `notebooks/AgentGuard_GRPO_training.ipynb` on branch `hf-split` |
-| **Training run (HF Space / Hub file mirror)**                   | After push: [notebooks/AgentGuard_GRPO_training.ipynb in Space](https://huggingface.co/spaces/shekhar1090/agentguard-gym-final/blob/main/notebooks/AgentGuard_GRPO_training.ipynb) (same source as repo)          |
-| **T4 / setup runbook (markdown)**                               | `COLAB_T4_GUIDE.md` — [in Space / repo](https://huggingface.co/spaces/shekhar1090/agentguard-gym-final/blob/main/COLAB_T4_GUIDE.md)                                                                               |
-| **Mini–blog (Hugging Face, MD in repo/Space)**                  | [HF_BLOG.md](https://huggingface.co/spaces/shekhar1090/agentguard-gym-final/blob/main/HF_BLOG.md)                                                                                                                 |
-| **YouTube (optional, under 2 min)**                             | Add your public URL here when ready — not hosted on Hub (link only)                                                                                                                                               |
-| **Training evidence (loss + rates; real run)**                  | `runs/training_metrics.jsonl` (logged each step) → `uv run python scripts/plot_training_metrics.py` → `results/training_curve.png`. Commit the PNG + a short W&B or JSONL description if you use W&B.         |
+| Deliverable                                                     | URL / path                                                                                                                                                                                                                                                                                                                                                                                     |
+| --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Hugging Face Space (live environment; judge evaluation URL)** | [https://huggingface.co/spaces/shekhar1090/agentguard-gym-final](https://huggingface.co/spaces/shekhar1090/agentguard-gym-final)                                                                                                                                                                                                                                                               |
+| **Training re-run (Colab, public)**                             | [Open in Colab](https://colab.research.google.com/github/shekhar871/New-Project-A-and-B/blob/hf-split/notebooks/AgentGuard_GRPO_training.ipynb) — `notebooks/AgentGuard_GRPO_training.ipynb` on branch `hf-split`                                                                                                                                                                              |
+| **Training run (HF Space / Hub file mirror)**                   | After push: [notebooks/AgentGuard_GRPO_training.ipynb in Space](https://huggingface.co/spaces/shekhar1090/agentguard-gym-final/blob/main/notebooks/AgentGuard_GRPO_training.ipynb) (same source as repo)                                                                                                                                                                                       |
+| **T4 / setup runbook (markdown)**                               | `COLAB_T4_GUIDE.md` — [in Space / repo](https://huggingface.co/spaces/shekhar1090/agentguard-gym-final/blob/main/COLAB_T4_GUIDE.md)                                                                                                                                                                                                                                                            |
+| **Blog (submission write-up, MD in repo/Space)**                | [`BLOG.md`](BLOG.md) — [in Space](https://huggingface.co/spaces/shekhar1090/agentguard-gym-final/blob/main/BLOG.md)                                                                                                                                                                                                                 |
+| **YouTube (optional, under 2 min)**                             | *Not submitted* — add a public **YouTube** URL here only if you record a demo; never upload video files to the Hub.                                                                                                                                                                                                                                                                            |
+| **Training evidence (loss + rates; real run)**                  | `runs/training_metrics.jsonl` (per-step `win_rate` / `fp_rate`, `entropy`, and `loss` when the trainer logs it) → `uv run python scripts/plot_training_metrics.py` → `results/training_curve.png`. Re-run on GPU and commit JSONL + PNG for the strongest audit. |
 
+### Training evidence (plot)
+
+![GRPO telemetry: win_rate, fp_rate, entropy (and loss if present in JSONL)](results/training_curve.png)
+
+*Generated from `runs/training_metrics.jsonl` via `scripts/plot_training_metrics.py`. After a full GPU run, ensure the JSONL includes `loss` so the plot shows a loss panel.*
 
 > **OpenEnv:** `openenv-core` is in `pyproject.toml`; the HTTP surface matches the OpenEnv layout (`openenv.yaml`, `server/app.py`).
 
@@ -50,7 +40,7 @@ tags:
 11. [Environment variables](#11-environment-variables)
 12. [Documentation index](#12-documentation-index)
 
-* * *
+---
 
 ## 1. Approaches & research map
 
@@ -289,7 +279,7 @@ docker run --rm -e PORT=7860 -p 7860:7860 agentguard-gym:local
 curl -s http://127.0.0.1:7860/health
 ```
 
-- **Hugging Face Spaces (Docker SDK):** `Dockerfile` sets `ENV PORT=7860`, `EXPOSE 7860`, and this README’s `app_port: 7860` so the default Space probe and health check match.  
+- **Hugging Face Spaces (Docker SDK):** `Dockerfile` sets `ENV PORT=7860` and `EXPOSE 7860` so the container matches the default Space port and health checks.  
 - You can still override with `-e PORT=...` for local smoke tests.
 
 ---
@@ -324,6 +314,7 @@ curl -s http://127.0.0.1:7860/health
 | ----------------------------------- | -------------------------------------------------------- |
 | `CALCULATIONS_REFERENCE.md`         | **AgentGuard** reward derivations, bounds, file pointers |
 | `PRE_SUBMISSION_CHECKLIST.md`       | End-to-end submit checklist                              |
+| `BLOG.md`                           | **Hackathon blog** (narrative + vetted technical detail)  |
 | `AGENTGUARD_FINAL_BLUEPRINT (1).md` | Grand Finals blueprint & gap list                        |
 | `openenv.yaml`                      | Machine-readable env manifest for OpenEnv / judges       |
 
