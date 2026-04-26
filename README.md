@@ -1,10 +1,11 @@
 ---
-title: AgentGuard-Gym
-emoji: 🛡️
-colorFrom: indigo
-colorTo: green
-sdk: docker
+title: "AgentGuard-Gym"
+emoji: "🤖"
+colorFrom: "indigo"
+colorTo: "green"
+sdk: "docker"
 app_port: 7860
+short_description: "OpenEnv-style cybersecurity gym — FastAPI + GRPO defense training"
 ---
 
 # AgentGuard-Gym
