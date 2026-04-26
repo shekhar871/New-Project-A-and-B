@@ -18,7 +18,7 @@ import json
 import random
 from pathlib import Path
 
-from agentguard_gym.grandfinals.adversarial_loop import AdversarialSystem
+from agentguard_gym.grandfinals.adversarial_loop import AdversarialSystem, ExperienceBuffer
 from agentguard_gym.models import CyberAdversarialTaskType
 
 
@@ -39,6 +39,7 @@ def main() -> None:
     per_task = 200
     benign_ratio = 0.30  # Aligned with live AdversarialSystem (BENIGN_EPISODE_PROB)
 
+    replay = ExperienceBuffer(capacity=200)
     rows = 0
     with out_path.open("w", encoding="utf-8") as f:
         for task in (
@@ -69,8 +70,32 @@ def main() -> None:
                         "difficulty_score": a.difficulty_score,
                         "is_malicious_ground_truth": True,
                     }
+                    # Replay hook: run a cheap heuristic defender episode to detect hard cases (FN)
+                    try:
+                        ep = system.run_episode(task=task, step_idx=i, generalization_attack=a)
+                        replay.add(ep)
+                    except Exception:
+                        pass
                 f.write(json.dumps(record, ensure_ascii=False) + "\n")
                 rows += 1
+
+                # Every ~10 items, replay a couple of hard FNs into the corpus
+                if (i + 1) % 10 == 0:
+                    for ep in replay.sample_hard(n=2):
+                        try:
+                            rr = {
+                                "task": ep.task.value,
+                                "attack_text": ep.attack.attack_text,
+                                "attack_type": f"replay_{ep.attack.attack_type}",
+                                "difficulty_score": float(ep.attack.difficulty_score),
+                                "is_malicious_ground_truth": True,
+                                "replay": True,
+                                "replay_outcome": ep.outcome,
+                            }
+                            f.write(json.dumps(rr, ensure_ascii=False) + "\n")
+                            rows += 1
+                        except Exception:
+                            pass
 
     print(f"Wrote {rows} records to {out_path}")
 
