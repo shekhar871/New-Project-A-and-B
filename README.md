@@ -1,5 +1,16 @@
-
-
+---
+title: AgentGuard-Gym
+emoji: "🛡️"
+colorFrom: blue
+colorTo: red
+sdk: docker
+pinned: false
+license: bsd-3-clause
+app_port: 7860
+tags:
+  - openenv
+  - security
+  - adversarial-rl
 ---
 
 # AgentGuard-Gym
@@ -17,7 +28,7 @@
 | **T4 / setup runbook (markdown)**                               | `COLAB_T4_GUIDE.md` — [in Space / repo](https://huggingface.co/spaces/shekhar1090/agentguard-gym-final/blob/main/COLAB_T4_GUIDE.md)                                                                               |
 | **Mini–blog (Hugging Face, MD in repo/Space)**                  | [HF_BLOG.md](https://huggingface.co/spaces/shekhar1090/agentguard-gym-final/blob/main/HF_BLOG.md)                                                                                                                 |
 | **YouTube (optional, under 2 min)**                             | Add your public URL here when ready — not hosted on Hub (link only)                                                                                                                                               |
-| **Training evidence (loss + rates; real run)**                  | `runs/training_metrics.jsonl` (logged each step) → `uv run python scripts/plot_training_metrics.py` → `**results/training_curve.png`**. Commit the PNG + a short W&B or JSONL description if you use W&B.         |
+| **Training evidence (loss + rates; real run)**                  | `runs/training_metrics.jsonl` (logged each step) → `uv run python scripts/plot_training_metrics.py` → `results/training_curve.png`. Commit the PNG + a short W&B or JSONL description if you use W&B.         |
 
 
 > **OpenEnv:** `openenv-core` is in `pyproject.toml`; the HTTP surface matches the OpenEnv layout (`openenv.yaml`, `server/app.py`).
@@ -39,7 +50,7 @@
 11. [Environment variables](#11-environment-variables)
 12. [Documentation index](#12-documentation-index)
 
----
+* * *
 
 ## 1. Approaches & research map
 
