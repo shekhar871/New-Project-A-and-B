@@ -5,7 +5,7 @@ colorFrom: "indigo"
 colorTo: "green"
 sdk: "docker"
 app_port: 7860
-short_description: "OpenEnv-style cybersecurity gym — FastAPI + GRPO defense training"
+short_description: "OpenEnv cyber-gym: FastAPI, GRPO defense training"
 ---
 
 # AgentGuard-Gym
