@@ -7,6 +7,7 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
+from collections import deque
 from typing import Any, Dict, List, Optional
 
 from agentguard_gym.models import (
@@ -348,19 +349,24 @@ class AdversarialSystem:
 
 class ExperienceBuffer:
     """
-    G13 (blueprint) — experience replay hook. Placeholder: ring buffer for high-variance
-    trajectories; wire into the GRPO dataloader in a future revision.
+    G13 — minimum viable experience replay buffer.
+    Stores recent episode results and can sample “hard” examples (e.g. FN) for replay.
     """
 
-    def __init__(self, capacity: int = 1024) -> None:
-        self.capacity = max(1, int(capacity))
-        self._rows: list = []
+    def __init__(self, capacity: int = 200) -> None:
+        self._buf = deque(maxlen=max(1, int(capacity)))
 
-    def add(self, row: object) -> None:
-        self._rows.append(row)
-        if len(self._rows) > self.capacity:
-            self._rows.pop(0)
+    def add(self, ep: AdversarialEpisodeResult) -> None:
+        self._buf.append(ep)
+
+    def sample_hard(self, n: int = 2) -> List[AdversarialEpisodeResult]:
+        hard = [e for e in self._buf if getattr(e, "outcome", None) == "FN"]
+        pool = hard or list(self._buf)
+        if not pool:
+            return []
+        k = min(int(n), len(pool))
+        return random.sample(pool, k)
 
     def __len__(self) -> int:  # noqa: D105
-        return len(self._rows)
+        return len(self._buf)
 

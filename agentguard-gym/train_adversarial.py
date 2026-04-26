@@ -61,6 +61,11 @@ def load_grpo_corpus(path: str) -> Dataset:
             )
             register_training_prompt_metadata(prompt=prompt, is_malicious=is_mal, task=task)
             records.append({"prompt": prompt})
+    assert len(records) > 0, "GRPO corpus is empty."
+    # Registry safety: strict reward_fn requires metadata
+    from agentguard_gym.training.reward_fns import PROMPT_SHA_TO_META
+
+    assert len(PROMPT_SHA_TO_META) > 0, "Prompt metadata registry empty — register_training_prompt_metadata was not called."
     print(f"Loaded {len(records)} training examples from corpus (metadata: SHA->GT, not [GT:] tags)")
     return Dataset.from_list(records)
 
