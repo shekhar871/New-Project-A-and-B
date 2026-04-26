@@ -18,6 +18,16 @@ _CACHE_DIR = Path("data")
 _EMB_CACHE = _CACHE_DIR / "offline_embeddings.npy"
 _HASH_CACHE = _CACHE_DIR / "offline_embeddings.sha256"
 
+# Load cached embeddings immediately if present (fast path).
+try:
+    if _EMB_CACHE.exists() and _HASH_CACHE.exists():
+        import numpy as np  # type: ignore
+
+        _CORPUS_EMBS = np.load(_EMB_CACHE)
+        _CORPUS_HASH = _HASH_CACHE.read_text(encoding="utf-8").strip() or None
+except Exception:
+    pass
+
 
 def _get_embedder():
     global _EMBEDDER, _USE_EMBED
