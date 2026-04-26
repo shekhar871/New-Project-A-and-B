@@ -21,7 +21,8 @@ tags:
 
 - **Hugging Face Space (environment URL)**: `https://huggingface.co/spaces/shekhar1090/agentguard-gym-final`
 - **Colab notebook (training re-run)**: `COLAB_T4_GUIDE.md` (runbook) — `https://huggingface.co/spaces/shekhar1090/agentguard-gym-final/blob/main/COLAB_T4_GUIDE.md`
-- **Mini-blog (HF) or <2 min YouTube demo**: **TODO** (add link)
+- **HF blog writeup (MD file in this Space)**: `HF_BLOG.md` — `https://huggingface.co/spaces/shekhar1090/agentguard-gym-final/blob/main/HF_BLOG.md`
+- **YouTube demo (optional, <2 min)**: **TODO** (add link if you record)
 
 > **Scope:** This repository is **AgentGuard-Gym only** (cyber/AI security). Training and math are documented for reproducibility; see `CALCULATIONS_REFERENCE.md` for **AgentGuard** reward derivations (ignore legacy AML-DefenseGym sections in that file if you maintain a single-gym tree).
 
