@@ -16,6 +16,7 @@ EventType = Literal[
     "trainer.started",
     "trainer.stopped",
     "trainer.tick",
+    "trainer.metrics",
     "episode.started",
     "episode.step",
     "episode.ended",

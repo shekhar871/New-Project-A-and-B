@@ -21,6 +21,7 @@ from agentguard_gym.training.reward_fns import (
     register_training_prompt_metadata,
     reset_outcome_tally,
 )
+from agentguard_gym.training.replay import ReplayMixedPrompts
 
 try:
     from unsloth import FastLanguageModel
@@ -179,15 +180,15 @@ def main() -> None:
     # We load corpus + register metadata BEFORE constructing the trainer (and even before model load)
     # so any failure is caught early with explicit assertions.
     # ---------------------------------------------------------------------
-    dataset = load_grpo_corpus(CORPUS_PATH)
+    base_dataset = load_grpo_corpus(CORPUS_PATH)
     from agentguard_gym.training.reward_fns import PROMPT_SHA_TO_META
 
-    assert len(PROMPT_SHA_TO_META) == len(dataset), (
-        f"Registry has {len(PROMPT_SHA_TO_META)}/{len(dataset)} entries. "
+    assert len(PROMPT_SHA_TO_META) == len(base_dataset), (
+        f"Registry has {len(PROMPT_SHA_TO_META)}/{len(base_dataset)} entries. "
         "Likely cause: prompt hashing mismatch or corpus encoding issues."
     )
     # Sentinel reward probe (“smoke test before the gun fires”)
-    _probe_prompt = dataset[0]["prompt"]
+    _probe_prompt = base_dataset[0]["prompt"]
     _probe_completion = "{\"decision\":\"block\"}"
     _probe_reward = defender_reward_fn([_probe_prompt], [_probe_completion])[0]
     assert (not isinstance(_probe_reward, float)) or (_probe_reward == _probe_reward), "Sentinel reward is NaN."
@@ -204,6 +205,11 @@ def main() -> None:
         )
     except Exception:
         pass
+
+    # Track 1: Experience Replay mix-in for GRPO prompt sampling.
+    # 30% replayed prompts, 70% fresh prompts (default matches BENIGN_EPISODE_PROB philosophy).
+    replay_ratio = float(os.getenv("REPLAY_RATIO", "0.30"))
+    dataset = ReplayMixedPrompts(base_prompts=list(base_dataset), replay_ratio=replay_ratio, prioritized=True)
 
     sft = data_dir / "sft_warmstart.json"
     if sft.is_file():
@@ -268,7 +274,7 @@ def main() -> None:
 
     print("Starting GRPO training...")
     print(f"  backend: {'Unsloth' if USE_UNSLOTH else 'transformers+PEFT+4bit'}")
-    print(f"  dataset size: {len(dataset)}")
+    print(f"  dataset size: {len(dataset)} (replay_ratio={replay_ratio})")
 
     trainer.train()
 

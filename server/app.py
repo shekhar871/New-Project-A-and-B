@@ -27,6 +27,60 @@ _trainer = RealTimeTrainer(_bus)
 _adv: Optional[AdversarialSystem] = None
 
 
+def _start_metrics_tailer() -> None:
+    """
+    Track 2: Surface real GRPO training signals in the live dashboard.
+    If `runs/training_metrics.jsonl` exists (from a Colab/HF-Jobs run), we tail it
+    and re-broadcast entries as SSE events so judges can see a live curve.
+    """
+
+    import json
+    import threading
+    import time
+    from pathlib import Path
+
+    path = Path("runs/training_metrics.jsonl")
+
+    def _tail() -> None:
+        last = 0
+        while True:
+            try:
+                if not path.is_file():
+                    time.sleep(1.0)
+                    continue
+                with path.open("r", encoding="utf-8") as f:
+                    f.seek(last)
+                    for line in f:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        try:
+                            row = json.loads(line)
+                        except Exception:
+                            continue
+                        _bus.emit(
+                            "trainer.metrics",
+                            {
+                                "step": row.get("step"),
+                                "win_rate": row.get("win_rate"),
+                                "fp_rate": row.get("fp_rate"),
+                                "entropy": row.get("entropy"),
+                                "loss": row.get("loss"),
+                            },
+                        )
+                    last = f.tell()
+            except Exception:
+                time.sleep(1.0)
+            time.sleep(0.5)
+
+    threading.Thread(target=_tail, daemon=True).start()
+
+
+@app.on_event("startup")
+def _on_startup() -> None:
+    _start_metrics_tailer()
+
+
 def _adversarial_system() -> AdversarialSystem:
     global _adv
     if _adv is None:
@@ -162,6 +216,12 @@ def ui() -> str:
       <div class="sub" style="margin-top:10px;">
         Tip: run a single episode to inspect step-by-step rewards/outcomes in the log.
       </div>
+      <div class="sep"></div>
+      <div class="title" style="font-size:14px;margin-bottom:8px;">Learning curve (streamed)</div>
+      <div class="sub" style="margin-bottom:10px;">
+        Green = win_rate, Red = fp_rate from <code>runs/training_metrics.jsonl</code> if present.
+      </div>
+      <canvas id="chart" width="330" height="140" style="width:100%;background:#070b17;border:1px solid var(--line);border-radius:12px;"></canvas>
     </section>
     <section class="card">
       <div class="row" style="justify-content:space-between;">
@@ -177,6 +237,36 @@ def ui() -> str:
 <script>
   const $ = (id) => document.getElementById(id);
   const log = $("log");
+  const metrics = [];
+  function redrawChart() {
+    const c = $("chart");
+    if (!c) return;
+    const ctx = c.getContext("2d");
+    const W = c.width, H = c.height;
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle = "#070b17";
+    ctx.fillRect(0,0,W,H);
+    ctx.strokeStyle = "rgba(255,255,255,0.08)";
+    for (let i=0;i<5;i++){
+      const y = (H-20) - i*((H-30)/4);
+      ctx.beginPath(); ctx.moveTo(10,y); ctx.lineTo(W-10,y); ctx.stroke();
+    }
+    const pts = metrics.slice(-200);
+    if (pts.length < 2) return;
+    function plot(key, color){
+      ctx.strokeStyle = color;
+      ctx.beginPath();
+      for (let i=0;i<pts.length;i++){
+        const x = 10 + (i*(W-20)/(pts.length-1));
+        const v = Math.max(0, Math.min(1, Number(pts[i][key] ?? 0)));
+        const y = (H-20) - v*(H-30);
+        if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      }
+      ctx.stroke();
+    }
+    plot("win_rate", "#39d98a");
+    plot("fp_rate", "#ff5c7a");
+  }
   function append(line, cls="") {
     const div = document.createElement("div");
     div.textContent = line;
@@ -241,6 +331,11 @@ def ui() -> str:
     const d = JSON.parse(e.data);
     append(`[trainer] started policy=${d.policy}`);
     refreshStatus().catch(()=>{});
+  });
+  es.addEventListener("trainer.metrics", (e) => {
+    const d = JSON.parse(e.data);
+    metrics.push(d);
+    redrawChart();
   });
   es.addEventListener("trainer.stopped", () => {
     append(`[trainer] stopped`);
