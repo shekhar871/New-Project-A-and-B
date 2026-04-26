@@ -130,6 +130,10 @@ def _load_model_and_tokenizer():
         )
         return model, tokenizer
 
+    # T4-safe defaults: use fp16 on CUDA unless explicitly overridden.
+    # (T4 generally does not support bf16; fp16 is the correct default.)
+    if torch.cuda.is_available():
+        os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "max_split_size_mb:128")
     use_4bit = bool(torch.cuda.is_available())
     bnb = (
         BitsAndBytesConfig(
@@ -148,7 +152,7 @@ def _load_model_and_tokenizer():
         quantization_config=bnb,
         device_map=("auto" if use_4bit else None),
         trust_remote_code=True,
-        torch_dtype=(torch.bfloat16 if use_4bit else None),
+        torch_dtype=(torch.float16 if use_4bit else None),
     )
     peft = LoraConfig(
         r=16,
@@ -244,18 +248,29 @@ def main() -> None:
         except Exception as e:
             print(f"[warn] SFT warmstart skipped due to error: {e}")
 
+    # HF Jobs / Colab knobs (T4 defaults):
+    # - MAX_STEPS: set to ~100 for quick evidence
+    # - NUM_GENERATIONS: 4 is typical; reduce to 2 if OOM
+    # - MAX_COMPLETION_LENGTH: keep short on T4
+    max_steps = int(os.getenv("MAX_STEPS", "100"))
+    num_generations = int(os.getenv("NUM_GENERATIONS", "4"))
+    max_completion_length = int(os.getenv("MAX_COMPLETION_LENGTH", "128"))
+
     config = GRPOConfig(
         output_dir=OUTPUT_DIR,
-        num_train_epochs=3,
+        max_steps=max_steps,
+        num_train_epochs=1,
         per_device_train_batch_size=1,
-        gradient_accumulation_steps=8,
+        gradient_accumulation_steps=4,
         learning_rate=5e-6,
         beta=0.04,
-        num_generations=4,
-        max_completion_length=200,
+        num_generations=num_generations,
+        max_completion_length=max_completion_length,
         logging_steps=1,
         save_steps=25,
         report_to="wandb",
+        fp16=bool(torch.cuda.is_available()),
+        bf16=False,
         remove_unused_columns=False,
     )
 
