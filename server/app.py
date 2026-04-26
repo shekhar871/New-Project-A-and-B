@@ -145,95 +145,306 @@ def ui() -> str:
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>AgentGuard-Gym — Live</title>
   <style>
-    :root { --bg:#0b1020; --panel:#121a33; --muted:#9aa4c0; --text:#e8ecff; --ok:#39d98a; --bad:#ff5c7a; --warn:#ffd166; --line:#22305f; }
-    body { margin:0; background:var(--bg); color:var(--text); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
-    header { padding:18px 18px 10px; border-bottom:1px solid var(--line); display:flex; gap:12px; align-items:center; justify-content:space-between; }
-    .title { font-weight:700; letter-spacing:0.2px; }
-    .sub { color:var(--muted); font-size:13px; margin-top:4px; }
-    main { padding:18px; display:grid; grid-template-columns: 360px 1fr; gap:14px; }
-    .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px; }
-    .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-    button, select, input { background:#0f1731; color:var(--text); border:1px solid var(--line); padding:10px 10px; border-radius:10px; font-size:14px; }
-    button { cursor:pointer; }
-    button.primary { background:#2a4bff; border-color:#2a4bff; }
-    button.danger { background:#401324; border-color:#6a1e3a; }
-    .kpi { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;}
-    .k { padding:10px; background:#0f1731; border:1px solid var(--line); border-radius:10px; }
-    .k .l { color:var(--muted); font-size:12px; }
-    .k .v { font-size:20px; font-weight:700; margin-top:6px; }
-    .log { height:540px; overflow:auto; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size:12px; background:#070b17; border:1px solid var(--line); border-radius:12px; padding:12px; }
-    .pill { padding:4px 8px; border-radius:999px; font-size:12px; border:1px solid var(--line); background:#0f1731; color:var(--muted); }
-    .pill.ok { color:var(--ok); border-color:rgba(57,217,138,.35); }
-    .pill.bad { color:var(--bad); border-color:rgba(255,92,122,.35); }
-    .pill.warn { color:var(--warn); border-color:rgba(255,209,102,.35); }
-    .sep { height:1px; background:var(--line); margin:12px 0; }
-    a { color:#9db2ff; text-decoration:none; }
-    a:hover { text-decoration:underline; }
+    :root{
+      --page:#F6F6F6;
+      --paper:#FFFFFF;
+      --ink:#0B0B0B;
+      --muted:#6B6B6B;
+      --line:rgba(0,0,0,.10);
+      --shadow:0 10px 30px rgba(0,0,0,.08);
+      --radius:18px;
+      --radius-pill:999px;
+      --ok:#0B6B4A;
+      --bad:#C62828;
+      --warn:#B26A00;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      background:var(--page);
+      color:var(--ink);
+      font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      letter-spacing:.1px;
+    }
+    a{color:inherit; text-decoration:none}
+    a:hover{text-decoration:underline}
+
+    .notice{
+      border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg, #FFF7E6, #FFFBF0);
+      padding:10px 18px;
+      font-size:13px;
+      color:#4A2E00;
+    }
+    .notice code{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace}
+
+    .shell{
+      display:grid;
+      grid-template-columns: 76px 1fr;
+      min-height:100vh;
+    }
+
+    .rail{
+      margin:16px 0 16px 16px;
+      background:var(--ink);
+      border-radius:22px;
+      box-shadow: var(--shadow);
+      padding:14px 0;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:12px;
+    }
+    .mark{
+      width:44px; height:44px;
+      border-radius:16px;
+      background:#111;
+      color:#fff;
+      display:grid; place-items:center;
+      font-weight:800;
+      letter-spacing:-0.5px;
+    }
+    .navbtn{
+      width:44px; height:44px;
+      border-radius:16px;
+      display:grid; place-items:center;
+      color:rgba(255,255,255,.75);
+      font-size:16px;
+      user-select:none;
+    }
+    .navbtn[aria-disabled="true"]{opacity:.35}
+
+    .page{
+      padding:16px 16px 22px 16px;
+    }
+
+    .top{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:16px;
+      margin-bottom:14px;
+    }
+    .h1{
+      font-size:28px;
+      line-height:1.1;
+      font-weight:800;
+    }
+    .sub{
+      color:var(--muted);
+      font-size:13px;
+      margin-top:8px;
+      max-width:72ch;
+    }
+
+    .topMeta{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:flex-end;
+    }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:7px 12px;
+      border-radius:var(--radius-pill);
+      border:1px solid var(--line);
+      background:var(--paper);
+      color:var(--muted);
+      font-size:12px;
+      box-shadow:0 1px 0 rgba(0,0,0,.04);
+    }
+    .pill code{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; color:var(--ink)}
+    .pill.ok{color:var(--ok); border-color:rgba(11,107,74,.18)}
+    .pill.bad{color:var(--bad); border-color:rgba(198,40,40,.16)}
+    .pill.warn{color:var(--warn); border-color:rgba(178,106,0,.20)}
+
+    .grid{
+      display:grid;
+      grid-template-columns: minmax(360px, 420px) 1fr;
+      gap:14px;
+    }
+    @media (max-width: 1040px){
+      .grid{grid-template-columns:1fr; }
+    }
+
+    .card{
+      background:var(--paper);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow: var(--shadow);
+      padding:16px;
+    }
+    .card h2{
+      margin:0;
+      font-size:15px;
+      font-weight:800;
+    }
+    .card .hint{
+      margin:8px 0 0 0;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.4;
+    }
+
+    .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+    .sep{ height:1px; background:var(--line); margin:14px 0; }
+
+    select, input{
+      background:#FAFAFA;
+      color:var(--ink);
+      border:1px solid var(--line);
+      padding:10px 12px;
+      border-radius:14px;
+      font-size:14px;
+      outline:none;
+    }
+    input#seed{ width:160px; }
+
+    button{
+      border:1px solid var(--ink);
+      background:var(--ink);
+      color:#fff;
+      padding:10px 14px;
+      border-radius:16px;
+      font-size:14px;
+      cursor:pointer;
+    }
+    button.secondary{
+      background:transparent;
+      color:var(--ink);
+    }
+    button.ghost{
+      background:var(--paper);
+      color:var(--ink);
+      border-color:var(--line);
+    }
+    .danger{ border-color:rgba(198,40,40,.25); }
+    .danger:hover{ background:#111; }
+
+    .kpi { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; }
+    .k{
+      padding:12px;
+      background:linear-gradient(180deg, #FAFAFA, #FFFFFF);
+      border:1px solid var(--line);
+      border-radius:16px;
+    }
+    .k .l{ color:var(--muted); font-size:12px; }
+    .k .v{ font-size:22px; font-weight:850; margin-top:6px; letter-spacing:-0.2px; }
+
+    .chartWrap{
+      border:1px solid var(--line);
+      border-radius:16px;
+      background:#FAFAFA;
+      padding:8px;
+    }
+    canvas#chart{
+      width:100%;
+      display:block;
+      border-radius:12px;
+      background:#F7F7F7;
+    }
+
+    .log{
+      height:560px;
+      overflow:auto;
+      font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size:12px;
+      line-height:1.5;
+      background:linear-gradient(180deg, #FDFDFD, #F7F7F7);
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:12px;
+      color:var(--ink);
+    }
   </style>
 </head>
 <body>
-  <div style="background:#FAEEDA;border-bottom:1px solid #EF9F27;padding:7px 16px;font-size:13px;color:#633806;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace">
-    ⚡ Environment simulation (<b>heuristic/random</b> policy) in this dashboard · Real GRPO training →
+  <div class="notice">
+    ⚡ <b>UI-only simulation</b> (heuristic/random policy in this dashboard). <b>Real GRPO training</b> is separate →
     <code>uv run python train_adversarial.py</code>
   </div>
-  <header>
-    <div>
-      <div class="title">AgentGuard-Gym — Live dashboard</div>
-      <div class="sub">See episodes/training in real time. Backed by the same `AgentGuardEnvironment` + graders.</div>
-    </div>
-    <div class="row">
-      <span id="conn" class="pill warn">connecting</span>
-      <a class="pill" href="/docs" target="_blank" rel="noreferrer">API docs</a>
-    </div>
-  </header>
-  <main>
-    <section class="card">
-      <div class="row">
-        <select id="policy">
-          <option value="heuristic" selected>Heuristic policy</option>
-          <option value="random">Random policy</option>
-        </select>
-        <button class="primary" id="start">Start trainer</button>
-        <button class="danger" id="stop">Stop</button>
-      </div>
-      <div class="kpi">
-        <div class="k"><div class="l">Running</div><div class="v" id="running">—</div></div>
-        <div class="k"><div class="l">Episodes</div><div class="v" id="episodes">0</div></div>
-        <div class="k"><div class="l">Mean score (last 100)</div><div class="v" id="mean100">0.00</div></div>
-        <div class="k"><div class="l">Last score</div><div class="v" id="lastscore">0.00</div></div>
-      </div>
-      <div class="sep"></div>
-      <div class="row">
-        <select id="task">
-          <option value="">Any task</option>
-          <option value="prompt_injection">prompt_injection</option>
-          <option value="tool_misuse_ssrf">tool_misuse_ssrf</option>
-          <option value="memory_poisoning_privilege">memory_poisoning_privilege</option>
-        </select>
-        <input id="seed" placeholder="seed (optional)" style="width:140px"/>
-        <button id="runone">Run one episode</button>
-      </div>
-      <div class="sub" style="margin-top:10px;">
-        Tip: run a single episode to inspect step-by-step rewards/outcomes in the log.
-      </div>
-      <div class="sep"></div>
-      <div class="title" style="font-size:14px;margin-bottom:8px;">Learning curve (streamed)</div>
-      <div class="sub" style="margin-bottom:10px;">
-        Green = win_rate, Red = fp_rate from <code>runs/training_metrics.jsonl</code> if present.
-      </div>
-      <canvas id="chart" width="330" height="140" style="width:100%;background:#070b17;border:1px solid var(--line);border-radius:12px;"></canvas>
-    </section>
-    <section class="card">
-      <div class="row" style="justify-content:space-between;">
-        <div class="title" style="font-size:14px;">Live event log</div>
-        <div class="row">
-          <span class="pill">SSE: <code>/events</code></span>
-          <button id="clear">Clear</button>
+
+  <div class="shell" aria-label="app shell">
+    <aside class="rail" aria-label="sidebar">
+      <div class="mark" title="AgentGuard">AG</div>
+      <div class="navbtn" title="Home">⌂</div>
+      <div class="navbtn" title="Console (this page)">▣</div>
+      <div class="navbtn" aria-disabled="true" title="Settings">⚙</div>
+    </aside>
+
+    <div class="page">
+      <header class="top">
+        <div>
+          <div class="h1">AgentGuard-Gym</div>
+          <div class="sub">A clean live console for OpenEnv + adversarial telemetry. The backend is unchanged; this is presentation only.</div>
         </div>
-      </div>
-      <div id="log" class="log" aria-label="event log"></div>
-    </section>
-  </main>
+        <div class="topMeta">
+          <span id="conn" class="pill warn">connecting</span>
+          <a class="pill" href="/docs" target="_blank" rel="noreferrer">Open API docs</a>
+        </div>
+      </header>
+
+      <main class="grid">
+        <section class="card" id="panel-controls" aria-label="controls">
+          <h2>Trainer & episodes</h2>
+          <p class="hint">Same endpoints as before: <code>/trainer/*</code> and <code>/episode/run</code>.</p>
+
+          <div class="row" style="margin-top:12px">
+            <select id="policy">
+              <option value="heuristic" selected>Heuristic policy</option>
+              <option value="random">Random policy</option>
+            </select>
+            <button class="primary" id="start" type="button">Start trainer</button>
+            <button class="secondary danger" id="stop" type="button">Stop</button>
+          </div>
+
+          <div class="kpi">
+            <div class="k"><div class="l">Running</div><div class="v" id="running">—</div></div>
+            <div class="k"><div class="l">Episodes</div><div class="v" id="episodes">0</div></div>
+            <div class="k"><div class="l">Mean score (last 100)</div><div class="v" id="mean100">0.00</div></div>
+            <div class="k"><div class="l">Last score</div><div class="v" id="lastscore">0.00</div></div>
+          </div>
+
+          <div class="sep"></div>
+
+          <div class="row">
+            <select id="task">
+              <option value="">Any task</option>
+              <option value="prompt_injection">prompt_injection</option>
+              <option value="tool_misuse_ssrf">tool_misuse_ssrf</option>
+              <option value="memory_poisoning_privilege">memory_poisoning_privilege</option>
+            </select>
+            <input id="seed" placeholder="seed (optional)"/>
+            <button class="secondary" id="runone" type="button">Run one episode</button>
+          </div>
+          <p class="hint" style="margin-top:10px">Tip: run a single episode to inspect step-by-step outcomes in the log.</p>
+
+          <div class="sep"></div>
+          <h2>Learning curve (streamed)</h2>
+          <p class="hint">Green = <b>win_rate</b>, red = <b>fp_rate</b>. Filled from <code>runs/training_metrics.jsonl</code> (if present) and live <code>trainer.metrics</code>.</p>
+          <div class="chartWrap" style="margin-top:10px">
+            <canvas id="chart" width="860" height="180"></canvas>
+          </div>
+        </section>
+
+        <section class="card" id="panel-log" aria-label="log">
+          <div class="row" style="justify-content:space-between;">
+            <h2 style="font-size:15px; font-weight:800;">Live event log</h2>
+            <div class="row">
+              <span class="pill">SSE: <code>/events</code></span>
+              <button class="ghost" id="clear" type="button">Clear</button>
+            </div>
+          </div>
+          <p class="hint" style="margin-top:8px">Server-Sent Events stream. Same event types as before.</p>
+          <div id="log" class="log" style="margin-top:12px" aria-label="event log"></div>
+        </section>
+      </main>
+    </div>
+  </div>
 <script>
   const $ = (id) => document.getElementById(id);
   const log = $("log");
@@ -244,9 +455,9 @@ def ui() -> str:
     const ctx = c.getContext("2d");
     const W = c.width, H = c.height;
     ctx.clearRect(0,0,W,H);
-    ctx.fillStyle = "#070b17";
+    ctx.fillStyle = "#F7F7F7";
     ctx.fillRect(0,0,W,H);
-    ctx.strokeStyle = "rgba(255,255,255,0.08)";
+    ctx.strokeStyle = "rgba(0,0,0,0.08)";
     for (let i=0;i<5;i++){
       const y = (H-20) - i*((H-30)/4);
       ctx.beginPath(); ctx.moveTo(10,y); ctx.lineTo(W-10,y); ctx.stroke();
@@ -264,8 +475,8 @@ def ui() -> str:
       }
       ctx.stroke();
     }
-    plot("win_rate", "#39d98a");
-    plot("fp_rate", "#ff5c7a");
+    plot("win_rate", "#0B6B4A");
+    plot("fp_rate", "#C62828");
   }
   function append(line, cls="") {
     const div = document.createElement("div");
