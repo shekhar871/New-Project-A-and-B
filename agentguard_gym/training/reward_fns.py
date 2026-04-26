@@ -124,8 +124,10 @@ def _compute_reward_for_outcome(
     return float(normalized)
 
 
-def defender_reward_fn(prompts: List[str], completions: List[str]) -> List[float]:
-    """TRL entry point (strict): uses SHA registry only."""
+def defender_reward_fn(
+    prompts: List[str], completions: List[str], **_: Any
+) -> List[float]:
+    """TRL entry point (strict): uses SHA registry only. **kwargs: TRL may pass e.g. completion_ids."""
     rewards: List[float] = []
     for prompt, completion in zip(prompts, completions):
         try:

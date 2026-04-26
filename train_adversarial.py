@@ -186,10 +186,12 @@ def main() -> None:
     # so any failure is caught early with explicit assertions.
     # ---------------------------------------------------------------------
     base_dataset = load_grpo_corpus(CORPUS_PATH)
-    from agentguard_gym.training.reward_fns import PROMPT_SHA_TO_META
+    from agentguard_gym.training.reward_fns import PROMPT_SHA_TO_META, _prompt_key
 
-    assert len(PROMPT_SHA_TO_META) == len(base_dataset), (
-        f"Registry has {len(PROMPT_SHA_TO_META)}/{len(base_dataset)} entries. "
+    # One registry entry per *unique* prompt string (duplicates in JSONL are allowed).
+    keys_in_ds = {_prompt_key(base_dataset[i]["prompt"]) for i in range(len(base_dataset))}
+    assert set(PROMPT_SHA_TO_META.keys()) == keys_in_ds, (
+        f"Registry keys {len(PROMPT_SHA_TO_META)} != unique dataset prompt keys {len(keys_in_ds)}. "
         "Likely cause: prompt hashing mismatch or corpus encoding issues."
     )
     # Sentinel reward probe (“smoke test before the gun fires”)
