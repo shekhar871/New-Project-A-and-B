@@ -11,9 +11,10 @@ What this file is doing, in plain language:
   because it is implemented as a bounded multiplier that only depends on timing metadata.
 
 References (for your write-up / judges):
-- Ng, Harada & Russell (1999), "Policy Invariance Under Reward Transformations" (potential-based shaping).
-- ISO/IEC 27035-style incident metrics: MTTD / MTTR as operational latency signals (we use step proxies).
-- Sokol & Flach (2020) "Measuring Classifier Performance" (confusion-matrix-derived utilities; we normalize).
+- Ng, Harada & Russell (ICML 1999), "Policy Invariance Under Reward Transformations: Theory and Application to Reward Shaping".
+  Note: our time term is a bounded latency bonus inspired by operational metrics; it is not a strict potential-difference shaping guarantee.
+- ISO/IEC 27035 family: incident response operations and time-tracking metrics (MTTD/MTTR-style operational framing).
+- Sokolova & Lapalme (2009), "A systematic analysis of performance measures for classification tasks" (confusion-matrix measures).
 """
 
 from __future__ import annotations

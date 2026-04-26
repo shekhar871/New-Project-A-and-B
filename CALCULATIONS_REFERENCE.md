@@ -73,18 +73,17 @@ U \leftarrow U \times 0.9.
 
 (Here “+” means adding a negative number.)
 
-### Step 3 — MTTD / MTTR-style potential (bounded)
+### Step 3 — MTTD / MTTR-style latency bonus (bounded)
 
 Let `detected_step` / `remediated_step` be step indices maintained by the environment when a threat is handled correctly.
 
 \phi_{\text{time}} =
 \frac{\alpha}{1 + d_{\text{det}}}
+ + \frac{\beta}{1 + \max(0, d_{\text{rem}} - d_{\text{det}})}
 
-- \frac{\beta}{1 + \max(0, d_{\text{rem}} - d_{\text{det}})}
+**Defaults:** \(\alpha=\)`mttd_scale` **0.15**, \(\beta=\)`mttr_scale` **0.1**.
 
-**Defaults:** \alpha = `mttd_scale` `**0.15`**, \beta = `mttr_scale` `**0.1`**.
-
-**Code:** `reward_math.py` → `mttd_mttr_step_potential`; called from each `grade`_* in `graders.py`.
+**Code:** `reward_math.py` → `mttd_mttr_step_potential` (a bounded *bonus* term); called from each `grade_*` in `graders.py`.
 
 ### Step 4 — Raw utility & normalization bounds
 
@@ -197,8 +196,10 @@ Here **no extra min–max**: r = U_{\text{raw}} already in [0,1].
 
 ## References (high level)
 
-- Ng, Harada & Russell — potential-based shaping (time term is a loose, bounded analogue).
-- Elkan — cost-sensitive classification / asymmetric misclassification costs (AML sanctions).
-- Industry TM narratives — recall vs analyst workload (blend weights in transaction monitoring).
+- Ng, Harada & Russell (ICML 1999) — potential-based shaping (we use a bounded latency bonus inspired by operational metrics; it is **not** a formal potential-difference guarantee).
+- Schaul et al. (2015) — Prioritized Experience Replay (replay motivation in RL).
+- Schulman et al. (2017) — PPO-style training curves as standard RL evidence.
+- Sokolova & Lapalme (2009) — systematic analysis of classification measures (confusion-matrix reasoning).
+- ISO/IEC 27035 family — incident response operations and time-tracking metrics (MTTD/MTTR-style operational framing).
 
 For exact line-by-line behavior, always prefer the linked Python files above.

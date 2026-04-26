@@ -50,3 +50,14 @@ def test_mttd_mttr_potential_is_bounded_and_monotone_in_delay() -> None:
     assert early >= late
     assert 0.0 <= late <= 0.15 + 0.1
 
+
+def test_mttd_mttr_potential_max_at_zero_delay() -> None:
+    max_bonus = mttd_mttr_step_potential(
+        step_idx=0,
+        detected_step=0,
+        remediated_step=0,
+        mttd_scale=0.15,
+        mttr_scale=0.1,
+    )
+    assert max_bonus == 0.15 + 0.1
+
