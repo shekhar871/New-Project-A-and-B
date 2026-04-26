@@ -118,6 +118,10 @@ def ui() -> str:
   </style>
 </head>
 <body>
+  <div style="background:#FAEEDA;border-bottom:1px solid #EF9F27;padding:7px 16px;font-size:13px;color:#633806;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace">
+    ⚡ Environment simulation (<b>heuristic/random</b> policy) in this dashboard · Real GRPO training →
+    <code>uv run python train_adversarial.py</code>
+  </div>
   <header>
     <div>
       <div class="title">AgentGuard-Gym — Live dashboard</div>

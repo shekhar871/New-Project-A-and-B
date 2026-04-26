@@ -1,13 +1,22 @@
 from __future__ import annotations
 
+import hashlib
 import math
 import re
-from dataclasses import dataclass
+import time
+from pathlib import Path
 from typing import Iterable, List, Optional, Tuple
 
 # Optional: Sentence-BERT (blueprint) — falls back to bag-of-words
 _EMBEDDER = None
 _USE_EMBED: Optional[bool] = None
+
+# Optional embedding cache (R06)
+_CORPUS_EMBS = None
+_CORPUS_HASH: Optional[str] = None
+_CACHE_DIR = Path("data")
+_EMB_CACHE = _CACHE_DIR / "offline_embeddings.npy"
+_HASH_CACHE = _CACHE_DIR / "offline_embeddings.sha256"
 
 
 def _get_embedder():
@@ -23,6 +32,60 @@ def _get_embedder():
         _EMBEDDER = None
         _USE_EMBED = False
     return _EMBEDDER
+
+
+def _corpus_sha(texts: List[str]) -> str:
+    return hashlib.sha256("||".join(texts).encode("utf-8")).hexdigest()
+
+
+def _load_or_encode_corpus(texts: List[str]):
+    """
+    Encode corpus ONCE and memoize; persist to .npy with a sha256 sidecar for invalidation.
+    Returns normalized embeddings (np.float32).
+    """
+    import numpy as np
+
+    global _CORPUS_EMBS, _CORPUS_HASH
+    m = _get_embedder()
+    if m is None or not texts:
+        return None
+
+    _CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    digest = _corpus_sha(texts)
+    if _EMB_CACHE.exists() and _HASH_CACHE.exists():
+        try:
+            if _HASH_CACHE.read_text(encoding="utf-8").strip() == digest:
+                _CORPUS_EMBS = np.load(_EMB_CACHE)
+                _CORPUS_HASH = digest
+                return _CORPUS_EMBS
+        except Exception:
+            pass
+
+    embs = m.encode(
+        texts,
+        batch_size=128,
+        show_progress_bar=False,
+        convert_to_numpy=True,
+        normalize_embeddings=True,
+    ).astype("float32")
+    try:
+        np.save(_EMB_CACHE, embs)
+        _HASH_CACHE.write_text(digest, encoding="utf-8")
+    except Exception:
+        pass
+    _CORPUS_EMBS = embs
+    _CORPUS_HASH = digest
+    return _CORPUS_EMBS
+
+
+def _ensure_corpus_cache(corpus_list: List[str]):
+    global _CORPUS_EMBS, _CORPUS_HASH
+    if _CORPUS_EMBS is None:
+        return _load_or_encode_corpus(corpus_list)
+    digest = _corpus_sha(corpus_list)
+    if _CORPUS_HASH != digest:
+        return _load_or_encode_corpus(corpus_list)
+    return _CORPUS_EMBS
 
 
 def _tokenize(text: str) -> List[str]:
@@ -69,12 +132,9 @@ def _embed_novelty(text: str, corpus_list: list[str]) -> Tuple[float, float]:
     m = _get_embedder()
     if m is None or not corpus_list:
         return _bow_novelty(text, corpus_list)
-    embs = m.encode(
-        corpus_list,
-        show_progress_bar=False,
-        convert_to_numpy=True,
-        normalize_embeddings=True,
-    )
+    embs = _ensure_corpus_cache(corpus_list)
+    if embs is None:
+        return _bow_novelty(text, corpus_list)
     q = m.encode(
         [text],
         show_progress_bar=False,
