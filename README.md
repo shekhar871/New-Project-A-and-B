@@ -155,6 +155,7 @@ flowchart LR
 | `**scripts/generate_demo_cache.py`**       | G14: placeholder for demo cache (`results/demo_cache_hint.txt`).                                                                                    |
 | `**tests/test_rewards_bounded.py`**        | Invariant: rewards in range + smoke.                                                                                                                |
 | `**tests/test_calculations_reference.py`** | Unit checks vs documented formulas.                                                                                                                 |
+| `**tests/test_benign_sampling.py`**        | Verifies `BENIGN_EPISODE_PROB` fires at 20–40% over 500 trials.                                                                                     |
 
 
 ### 3.5 Configuration & deploy
