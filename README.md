@@ -1,3 +1,12 @@
+---
+title: AgentGuard-Gym
+emoji: 🛡️
+colorFrom: indigo
+colorTo: green
+sdk: docker
+app_port: 7860
+---
+
 # AgentGuard-Gym
 
 **AgentGuard-Gym** is an [OpenEnv](https://github.com/openenv/)-style cybersecurity gym for **agentic AI defense**: triage of prompt streams, tool/URL traces, and memory artifacts aligned with **OWASP Agentic AI (2026)**-style risk classes. The same codebase provides (1) a **deterministic, grader-based environment** for hackathon baselines, (2) a **Grand Finals adversarial stack** (attacker → defender → judge, curriculum, ELO, novelty, GRPO), including **~30% benign (TN/FP) episodes** from `data/benign_corpus.json` so the defender does not collapse to “always block”, and (3) a **FastAPI server** with a **real-time HTML dashboard** (Server-Sent Events) for episodes and training telemetry.
