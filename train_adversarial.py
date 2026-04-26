@@ -72,7 +72,9 @@ def load_grpo_corpus(path: str) -> Dataset:
 
 def load_sft_warmstart(path: str) -> Dataset:
     """
-    Minimal SFT warmstart dataset: JSON list of {task,narrative,response_json}.
+    Minimal SFT warmstart dataset:
+    - preferred: JSON list of {"prompt": "...", "completion": "..."} (gold pairs)
+    - backward compatible: {"task","narrative","response_json"} (older format)
     Produces rows with `prompt` and `completion` for TRL SFTTrainer.
     """
     from agentguard_gym.grandfinals.observation_builder import build_defender_prompt
@@ -83,6 +85,9 @@ def load_sft_warmstart(path: str) -> Dataset:
     rows = json.loads(p.read_text(encoding="utf-8"))
     out = []
     for r in rows:
+        if "prompt" in r and "completion" in r:
+            out.append({"prompt": str(r["prompt"]), "completion": str(r["completion"])})
+            continue
         task = str(r.get("task", "prompt_injection"))
         narrative = str(r.get("narrative", "")).strip()
         completion_obj = r.get("response_json") or {}
