@@ -1,6 +1,9 @@
 .env
 data/training_started_at
 .mplconfig/
+# Embedding cache (R06)
+data/offline_embeddings.npy
+data/offline_embeddings.sha256
 # Large/ephemeral training outputs
 checkpoints/
 

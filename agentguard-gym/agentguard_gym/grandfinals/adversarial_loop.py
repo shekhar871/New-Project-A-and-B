@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import random
 import re
 import time
@@ -164,6 +165,8 @@ class AdversarialSystem:
     elo: ELOTracker
     defender: DefenderBackend
     benign_by_task: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict)
+    demo_cache: Optional[List[dict]] = None
+    _demo_idx: int = 0
 
     @classmethod
     def from_seed_attacks(
@@ -180,6 +183,19 @@ class AdversarialSystem:
             ben = benign_corpus
         else:
             ben = _load_benign_corpus(data_dir)
+        demo_cache = None
+        try:
+            import os as _os
+
+            if _os.getenv("DEMO_MODE") == "1":
+                base = (data_dir or Path("data"))
+                candidates = [base / "demo_cache.json", Path("results") / "demo_cache.json"]
+                p = next((c for c in candidates if c.is_file()), None)
+                if p is not None:
+                    raw = json.loads(p.read_text(encoding="utf-8"))
+                    demo_cache = raw.get("episodes") if isinstance(raw, dict) else None
+        except Exception:
+            demo_cache = None
         return cls(
             seed_attacks=seed_attacks,
             corpus=corpus,
@@ -189,6 +205,7 @@ class AdversarialSystem:
             elo=ELOTracker(),
             defender=DefenderBackend(),
             benign_by_task=ben,
+            demo_cache=demo_cache,
         )
 
     def run_episode(
@@ -199,6 +216,15 @@ class AdversarialSystem:
         episode_id: Optional[str] = None,
         generalization_attack: Optional[AttackerAction] = None,
     ) -> AdversarialEpisodeResult:
+        # DEMO_MODE cache-first (skip API calls entirely when cache exists)
+        if self.demo_cache and (os.getenv("DEMO_MODE") == "1"):
+            try:
+                ep = self.demo_cache[self._demo_idx % len(self.demo_cache)]
+                self._demo_idx += 1
+                # Rehydrate minimal fields into our result type
+                return AdversarialEpisodeResult.model_validate(ep)  # type: ignore[attr-defined]
+            except Exception:
+                pass
         ep_id = episode_id or str(uuid.uuid4())
         if task is None:
             task = random.choice(list(CyberAdversarialTaskType))

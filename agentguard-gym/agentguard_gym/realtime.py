@@ -165,7 +165,7 @@ class RealTimeTrainer:
             self._status.started_at_ms = _now_ms()
             self._thread = threading.Thread(target=self._run, args=(cfg,), daemon=True)
             self._thread.start()
-            self._bus.emit("trainer.started", {"policy": cfg.policy})
+            self._bus.emit("trainer.started", {"policy": cfg.policy, "policy_type": cfg.policy})
             return self.status()
 
     def stop(self) -> TrainerStatus:
@@ -252,6 +252,7 @@ class RealTimeTrainer:
                             "outcome": res.reward.outcome,
                             "partial_credit": res.reward.partial_credit,
                             "done": res.done,
+                            "policy_type": cfg.policy,
                         },
                     )
                     obs = res.observation
